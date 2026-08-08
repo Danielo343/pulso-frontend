@@ -1,24 +1,50 @@
 import { defineStore } from 'pinia'
+import api from '../services/api'
 
-/**
- * Store de autenticación (placeholder).
- * Almacena únicamente datos de ejemplo para maquetar la interfaz.
- * La lógica real de autenticación se conectará posteriormente
- * con la API REST de Laravel.
- */
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: {
-      name: 'Dra. Camila Reyes',
-      role: 'Cuidadora principal',
-      email: 'camila.reyes@pulso.app',
-      avatar: 'https://i.pravatar.cc/150?img=47'
-    },
-    isAuthenticated: true // valor de ejemplo, sin lógica real
+    usuario: JSON.parse(localStorage.getItem('usuario')) || null,
+    token: localStorage.getItem('token_acceso') || null,
+    cargando: false,
+    error: null
   }),
+
+  getters: {
+    estaAutenticado: (state) => !!state.token
+  },
+
   actions: {
-    // Métodos vacíos, listos para integrarse con la API más adelante
-    login() {},
-    logout() {}
+    async iniciarSesion(credenciales) {
+      this.cargando = true
+      this.error = null
+      try {
+        const respuesta = await api.post('/iniciar-sesion', credenciales)
+        this.token = respuesta.data.token_acceso
+        this.usuario = respuesta.data.usuario
+
+        localStorage.setItem('token_acceso', this.token)
+        localStorage.setItem('usuario', JSON.stringify(this.usuario))
+
+        return respuesta.data
+      } catch (err) {
+        this.error = err.response?.data?.mensaje || 'Error al iniciar sesión'
+        throw this.error
+      } finally {
+        this.cargando = false
+      }
+    },
+
+    async cerrarSesion() {
+      try {
+        await api.post('/cerrar-sesion')
+      } catch (err) {
+        console.error('Error al cerrar sesión:', err)
+      } finally {
+        this.token = null
+        this.usuario = null
+        localStorage.removeItem('token_acceso')
+        localStorage.removeItem('usuario')
+      }
+    }
   }
 })

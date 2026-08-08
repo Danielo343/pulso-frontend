@@ -1,134 +1,172 @@
-<script setup>
-import { ref } from 'vue'
-import PageHeader from '@/components/common/PageHeader.vue'
-import Card from '@/components/ui/Card.vue'
-import Button from '@/components/ui/Button.vue'
-import Input from '@/components/ui/Input.vue'
-import { useAuthStore } from '@/stores/auth'
-
-const auth = useAuthStore()
-
-const tabs = ['Perfil', 'Notificaciones', 'Seguridad', 'Preferencias']
-const activeTab = ref('Perfil')
-
-const toggles = ref([
-  { label: 'Alertas de frecuencia cardíaca elevada', desc: 'Recibe una notificación inmediata ante lecturas anómalas', enabled: true },
-  { label: 'Recordatorios de medicamentos', desc: 'Avisos antes de cada horario de toma', enabled: true },
-  { label: 'Resumen semanal por correo', desc: 'Un resumen de salud cada lunes', enabled: false },
-  { label: 'Alertas de batería baja', desc: 'Notificación cuando un dispositivo esté por descargarse', enabled: true }
-])
-</script>
-
 <template>
-  <div>
-    <PageHeader
-      title="Configuración"
-      subtitle="Administra tu cuenta, notificaciones y preferencias"
-      :breadcrumb="[{ label: 'Dashboard', to: '/' }, { label: 'Configuración' }]"
-    />
+  <div class="space-y-6 max-w-4xl mx-auto">
+    <!-- Título de la Sección -->
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">Configuración</h1>
+      <p class="text-sm text-gray-500 mt-1">Gestiona tu perfil de usuario y la administración de datos de la plataforma.</p>
+    </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      <!-- Tabs -->
-      <nav class="lg:col-span-1 space-y-1">
-        <button
-          v-for="tab in tabs"
-          :key="tab"
-          class="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
-          :class="activeTab === tab ? 'bg-primary-600 text-white shadow-sm shadow-primary-600/20' : 'text-ink-500 hover:bg-ink-100'"
-          @click="activeTab = tab"
-        >
-          {{ tab }}
-        </button>
-      </nav>
+    <!-- Alertas de Estado -->
+    <div v-if="mensajeEstado" :class="`p-4 rounded-lg text-sm flex items-center justify-between ${esError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`">
+      <span>{{ mensajeEstado }}</span>
+      <button @click="mensajeEstado = ''" class="font-bold ml-4">&times;</button>
+    </div>
 
-      <!-- Contenido -->
-      <div class="lg:col-span-3 space-y-6">
-        <Card v-if="activeTab === 'Perfil'">
-          <template #header>
-            <h3 class="font-semibold text-ink-900">Información de perfil</h3>
-          </template>
+    <!-- Perfil de Usuario -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
+      <h2 class="text-lg font-semibold text-gray-800 border-b border-gray-100 pb-3">Perfil de Usuario</h2>
+      
+      <div class="flex items-center space-x-4">
+        <img
+          :src="usuarioAvatar"
+          alt="Avatar de usuario"
+          class="w-16 h-16 rounded-full object-cover border-2 border-blue-500 shadow-sm"
+        />
+        <div>
+          <h3 class="text-base font-bold text-gray-900">{{ usuarioNombre }}</h3>
+          <p class="text-sm text-gray-500">{{ usuarioCorreo }}</p>
+          <span class="inline-block mt-1 px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+            {{ usuarioRol }}
+          </span>
+        </div>
+      </div>
+    </div>
 
-          <div class="flex items-center gap-4 mb-6">
-            <img :src="auth.user.avatar" alt="Foto de perfil" class="h-16 w-16 rounded-full object-cover ring-2 ring-white shadow-soft" />
-            <div>
-              <Button variant="outline" size="sm">Cambiar foto</Button>
-              <p class="text-xs text-ink-400 mt-1.5">JPG o PNG. Máximo 2MB.</p>
-            </div>
-          </div>
+    <!-- Módulo de Respaldos Lógicos JSON -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+      <div class="border-b border-gray-100 pb-3">
+        <h2 class="text-lg font-semibold text-gray-800">Gestión de Respaldos Lógicos (JSON)</h2>
+        <p class="text-sm text-gray-500 mt-1">Exporta un archivo JSON estructurado con tus datos o restaura información desde un archivo de respaldo.</p>
+      </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Nombre completo" :model-value="auth.user.name" />
-            <Input label="Rol" :model-value="auth.user.role" />
-            <Input label="Correo electrónico" type="email" :model-value="auth.user.email" />
-            <Input label="Teléfono" type="tel" placeholder="+52 33 1234 5678" />
-          </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <!-- Exportar Respaldo -->
+        <div class="p-4 border border-gray-200 rounded-lg space-y-3 bg-gray-50">
+          <h3 class="font-medium text-gray-800 text-sm flex items-center space-x-2">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>Exportar Datos en JSON</span>
+          </h3>
+          <p class="text-xs text-gray-600">Descarga una copia completa de tus expedientes y mediciones en un archivo .json estructurado.</p>
+          <button
+            @click="exportarRespaldo"
+            :disabled="cargandoExportacion"
+            class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50 flex items-center justify-center shadow-sm"
+          >
+            <span>{{ cargandoExportacion ? 'Generando archivo...' : 'Descargar Respaldo JSON' }}</span>
+          </button>
+        </div>
 
-          <template #footer>
-            <div class="flex justify-end gap-3">
-              <Button variant="ghost">Cancelar</Button>
-              <Button variant="primary">Guardar cambios</Button>
-            </div>
-          </template>
-        </Card>
-
-        <Card v-if="activeTab === 'Notificaciones'">
-          <template #header>
-            <h3 class="font-semibold text-ink-900">Preferencias de notificaciones</h3>
-          </template>
-
-          <ul class="divide-y divide-ink-100">
-            <li v-for="(t, i) in toggles" :key="i" class="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-              <div class="pr-4">
-                <p class="text-sm font-medium text-ink-800">{{ t.label }}</p>
-                <p class="text-xs text-ink-400 mt-0.5">{{ t.desc }}</p>
-              </div>
-              <button
-                class="relative h-6 w-11 rounded-full transition-colors flex-shrink-0"
-                :class="t.enabled ? 'bg-primary-600' : 'bg-ink-200'"
-                @click="t.enabled = !t.enabled"
-              >
-                <span
-                  class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform"
-                  :class="t.enabled ? 'translate-x-5' : 'translate-x-0.5'"
-                />
-              </button>
-            </li>
-          </ul>
-        </Card>
-
-        <Card v-if="activeTab === 'Seguridad'">
-          <template #header>
-            <h3 class="font-semibold text-ink-900">Seguridad de la cuenta</h3>
-          </template>
-          <div class="space-y-4">
-            <Input label="Contraseña actual" type="password" placeholder="••••••••" />
-            <Input label="Nueva contraseña" type="password" placeholder="••••••••" />
-            <Input label="Confirmar nueva contraseña" type="password" placeholder="••••••••" />
-          </div>
-          <template #footer>
-            <div class="flex justify-end">
-              <Button variant="primary">Actualizar contraseña</Button>
-            </div>
-          </template>
-        </Card>
-
-        <Card v-if="activeTab === 'Preferencias'">
-          <template #header>
-            <h3 class="font-semibold text-ink-900">Preferencias generales</h3>
-          </template>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Idioma" model-value="Español" />
-            <Input label="Zona horaria" model-value="GMT-6 (Ciudad de México)" />
-            <Input label="Unidad de temperatura" model-value="Celsius (°C)" />
-            <Input label="Formato de fecha" model-value="DD/MM/AAAA" />
-          </div>
-          <template #footer>
-            <div class="flex justify-end">
-              <Button variant="primary">Guardar preferencias</Button>
-            </div>
-          </template>
-        </Card>
+        <!-- Importar Respaldo -->
+        <div class="p-4 border border-gray-200 rounded-lg space-y-3 bg-gray-50">
+          <h3 class="font-medium text-gray-800 text-sm flex items-center space-x-2">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            <span>Restaurar desde JSON</span>
+          </h3>
+          <p class="text-xs text-gray-600">Selecciona un archivo .json de respaldo previo para sincronizar y restaurar tu información.</p>
+          <input
+            type="file"
+            ref="inputArchivo"
+            @change="importarRespaldo"
+            accept=".json,application/json"
+            class="hidden"
+          />
+          <button
+            @click="$refs.inputArchivo.click()"
+            :disabled="cargandoImportacion"
+            class="w-full py-2 px-4 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition disabled:opacity-50 flex items-center justify-center shadow-sm"
+          >
+            <span>{{ cargandoImportacion ? 'Procesando...' : 'Seleccionar Archivo JSON' }}</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref, computed } from 'vue'
+import { useAuthStore } from '../stores/auth'
+import api from '../services/api'
+
+const authStore = useAuthStore()
+
+const cargandoExportacion = ref(false)
+const cargandoImportacion = ref(false)
+const mensajeEstado = ref('')
+const esError = ref(false)
+const inputArchivo = ref(null)
+
+// Propiedades computadas seguras
+const usuarioNombre = computed(() => {
+  return authStore.usuario?.nombre || authStore.usuario?.name || 'Usuario Pulso'
+})
+
+const usuarioCorreo = computed(() => {
+  return authStore.usuario?.correo || authStore.usuario?.email || 'admin@pulso.com'
+})
+
+const usuarioRol = computed(() => {
+  return authStore.usuario?.rol || 'Administrador'
+})
+
+const usuarioAvatar = computed(() => {
+  return authStore.usuario?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(usuarioNombre.value)}&background=0D8ABC&color=fff`
+})
+
+// Exportar Respaldo JSON
+const exportarRespaldo = async () => {
+  cargandoExportacion.value = true
+  mensajeEstado.value = ''
+  esError.value = false
+
+  try {
+    const respuesta = await api.get('/respaldo/exportar', { responseType: 'blob' })
+    const url = window.URL.createObjectURL(new Blob([respuesta.data]))
+    const enlace = document.createElement('a')
+    enlace.href = url
+    enlace.setAttribute('download', `respaldo_pulso_${new Date().toISOString().slice(0, 10)}.json`)
+    document.body.appendChild(enlace)
+    enlace.click()
+    document.body.removeChild(enlace)
+
+    mensajeEstado.value = '¡Respaldo JSON descargado exitosamente!'
+  } catch (error) {
+    esError.value = true
+    mensajeEstado.value = 'Error al descargar el archivo de respaldo.'
+    console.error(error)
+  } finally {
+    cargandoExportacion.value = false
+  }
+}
+
+// Importar Respaldo JSON
+const importarRespaldo = async (evento) => {
+  const archivo = evento.target.files[0]
+  if (!archivo) return
+
+  cargandoImportacion.value = true
+  mensajeEstado.value = ''
+  esError.value = false
+
+  const formData = new FormData()
+  formData.append('archivo_respaldo', archivo)
+
+  try {
+    const respuesta = await api.post('/respaldo/importar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    mensajeEstado.value = respuesta.data.mensaje || 'Respaldo importado con éxito.'
+  } catch (error) {
+    esError.value = true
+    mensajeEstado.value = error.response?.data?.mensaje || 'Error al importar el archivo de respaldo.'
+    console.error(error)
+  } finally {
+    cargandoImportacion.value = false
+    evento.target.value = ''
+  }
+}
+</script>

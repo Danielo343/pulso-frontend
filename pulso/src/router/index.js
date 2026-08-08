@@ -1,120 +1,84 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import AppLayout from '@/layouts/AppLayout.vue'
-import AuthLayout from '@/layouts/AuthLayout.vue'
+import { useAuthStore } from '../stores/auth'
+
+// Layouts
+import AppLayout from '../layouts/AppLayout.vue'
+import AuthLayout from '../layouts/AuthLayout.vue'
+
+// Vistas
+import LoginView from '../views/LoginView.vue'
+import DashboardView from '../views/DashboardView.vue'
+import UsuariosView from '../views/UsuariosView.vue'
+import ContactosView from '../views/ContactosView.vue'
+import DispositivosView from '../views/DispositivosView.vue'
+import EventosView from '../views/EventosView.vue'
+import MedicionesView from '../views/MedicionesView.vue'
+import MedicamentosView from '../views/MedicamentosView.vue'
+import RecetasView from '../views/RecetasView.vue'
+import ArchivosMedicosView from '../views/ArchivosMedicosView.vue'
+import HistorialMedicoView from '../views/HistorialMedicoView.vue'
+import NotificacionesView from '../views/NotificacionesView.vue'
+import ReportesView from '../views/ReportesView.vue'
+import ConfiguracionView from '../views/ConfiguracionView.vue'
 
 const routes = [
   {
-    path: '/login',
+    path: '/auth',
     component: AuthLayout,
     children: [
       {
-        path: '',
+        path: '/login',
         name: 'login',
-        component: () => import('@/views/LoginView.vue'),
-        meta: { title: 'Iniciar sesión' }
+        component: LoginView,
+        meta: { requiereAuth: false }
       }
     ]
   },
   {
     path: '/',
     component: AppLayout,
+    redirect: '/dashboard',
+    meta: { requiereAuth: true },
     children: [
-      {
-        path: '',
-        name: 'dashboard',
-        component: () => import('@/views/DashboardView.vue'),
-        meta: { title: 'Dashboard' }
-      },
-      {
-        path: 'usuarios',
-        name: 'usuarios',
-        component: () => import('@/views/UsuariosView.vue'),
-        meta: { title: 'Usuarios' }
-      },
-      {
-        path: 'dispositivos',
-        name: 'dispositivos',
-        component: () => import('@/views/DispositivosView.vue'),
-        meta: { title: 'Dispositivos' }
-      },
-      {
-        path: 'mediciones',
-        name: 'mediciones',
-        component: () => import('@/views/MedicionesView.vue'),
-        meta: { title: 'Mediciones' }
-      },
-      {
-        path: 'medicamentos',
-        name: 'medicamentos',
-        component: () => import('@/views/MedicamentosView.vue'),
-        meta: { title: 'Medicamentos' }
-      },
-      {
-        path: 'historial-medico',
-        name: 'historial-medico',
-        component: () => import('@/views/HistorialMedicoView.vue'),
-        meta: { title: 'Historial Médico' }
-      },
-      {
-        path: 'contactos',
-        name: 'contactos',
-        component: () => import('@/views/ContactosView.vue'),
-        meta: { title: 'Contactos de Emergencia' }
-      },
-      {
-        path: 'eventos',
-        name: 'eventos',
-        component: () => import('@/views/EventosView.vue'),
-        meta: { title: 'Eventos' }
-      },
-      {
-        path: 'notificaciones',
-        name: 'notificaciones',
-        component: () => import('@/views/NotificacionesView.vue'),
-        meta: { title: 'Notificaciones' }
-      },
-      {
-        path: 'archivos-medicos',
-        name: 'archivos-medicos',
-        component: () => import('@/views/ArchivosMedicosView.vue'),
-        meta: { title: 'Archivos Médicos' }
-      },
-      {
-        path: 'recetas',
-        name: 'recetas',
-        component: () => import('@/views/RecetasView.vue'),
-        meta: { title: 'Recetas Médicas' }
-      },
-      {
-        path: 'reportes',
-        name: 'reportes',
-        component: () => import('@/views/ReportesView.vue'),
-        meta: { title: 'Reportes' }
-      },
-      {
-        path: 'configuracion',
-        name: 'configuracion',
-        component: () => import('@/views/ConfiguracionView.vue'),
-        meta: { title: 'Configuración' }
-      }
+      { path: 'dashboard', name: 'dashboard', component: DashboardView },
+      { path: 'usuarios', name: 'usuarios', component: UsuariosView },
+      { path: 'contactos', name: 'contactos', component: ContactosView },
+      { path: 'dispositivos', name: 'dispositivos', component: DispositivosView },
+      { path: 'eventos', name: 'eventos', component: EventosView },
+      { path: 'mediciones', name: 'mediciones', component: MedicionesView },
+      { path: 'medicamentos', name: 'medicamentos', component: MedicamentosView },
+      { path: 'recetas', name: 'recetas', component: RecetasView },
+      { path: 'archivos-medicos', name: 'archivos-medicos', component: ArchivosMedicosView },
+      { path: 'historial-medico', name: 'historial-medico', component: HistorialMedicoView },
+      { path: 'notificaciones', name: 'notificaciones', component: NotificacionesView },
+      { path: 'reportes', name: 'reportes', component: ReportesView },
+      { path: 'configuracion', name: 'configuracion', component: ConfiguracionView }
     ]
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/'
+    redirect: '/dashboard'
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes,
-  scrollBehavior() {
-    return { top: 0 }
-  }
+  routes
 })
 
-router.beforeEach((to) => {
-  document.title = to.meta?.title ? `${to.meta.title} · Pulso` : 'Pulso'
+// Guardián de Navegación
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
+
+  const estaProtegida = to.matched.some(record => record.meta.requiereAuth)
+
+  if (estaProtegida && !authStore.estaAutenticado) {
+    next('/login')
+  } else if (to.path === '/login' && authStore.estaAutenticado) {
+    next('/dashboard')
+  } else {
+    next()
+  }
 })
 
 export default router
