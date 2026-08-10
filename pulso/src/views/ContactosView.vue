@@ -5,7 +5,7 @@
         <h1 class="text-2xl font-bold text-gray-800">Contactos de Emergencia</h1>
         <p class="text-sm text-gray-500 mt-1">Red de apoyo y familiares guardados en MongoDB Atlas.</p>
       </div>
-      <button @click="abrirModal" class="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow transition">
+      <button @click="abrirModal()" class="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow transition">
         + Nuevo Contacto
       </button>
     </div>
@@ -21,10 +21,21 @@
       <div v-else-if="contactos.length === 0" class="text-center py-8 text-gray-500 text-sm">No hay contactos de emergencia registrados.</div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div v-for="(item, idx) in contactos" :key="idx" class="p-4 border rounded-lg bg-gray-50 space-y-2">
-          <div class="flex justify-between items-center">
-            <h3 class="font-bold text-gray-800 text-base">{{ item.nombre }}</h3>
-            <span class="text-xs bg-blue-100 text-blue-800 font-medium px-2 py-0.5 rounded">{{ item.relacion }}</span>
+        <div v-for="(item, idx) in contactos" :key="item.id || idx" class="p-4 border rounded-lg bg-gray-50 space-y-3 relative group">
+          <div class="flex justify-between items-start">
+            <div>
+              <h3 class="font-bold text-gray-800 text-base">{{ item.nombre }}</h3>
+              <span class="text-xs bg-blue-100 text-blue-800 font-medium px-2 py-0.5 rounded">{{ item.relacion }}</span>
+            </div>
+            <!-- Botones de Acción (Editar / Eliminar) -->
+            <div class="flex space-x-1">
+              <button @click="abrirModal(item)" class="p-1 text-gray-500 hover:text-blue-600 text-xs bg-white border rounded shadow-sm" title="Editar">
+                ✏️
+              </button>
+              <button @click="eliminarContacto(item.id)" class="p-1 text-gray-500 hover:text-red-600 text-xs bg-white border rounded shadow-sm" title="Eliminar">
+                🗑️
+              </button>
+            </div>
           </div>
           <p class="text-sm text-gray-600 flex items-center space-x-1">
             <span>📞 {{ item.telefono }}</span>
@@ -33,10 +44,12 @@
       </div>
     </div>
 
-    <!-- Modal Nuevo Contacto -->
+    <!-- Modal Formulario (Crear / Editar) -->
     <div v-if="mostrarModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl">
-        <h3 class="text-lg font-bold text-gray-800">Agregar Contacto de Emergencia</h3>
+        <h3 class="text-lg font-bold text-gray-800">
+          {{ modoEdicion ? 'Editar Contacto de Emergencia' : 'Agregar Contacto de Emergencia' }}
+        </h3>
         <form @submit.prevent="guardarContacto" class="space-y-3">
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Nombre Completo</label>
@@ -53,7 +66,7 @@
           <div class="flex justify-end space-x-2 pt-2">
             <button type="button" @click="cerrarModal" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
             <button type="submit" :disabled="cargandoGuardado" class="px-4 py-2 text-sm bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
-              {{ cargandoGuardado ? 'Guardando...' : 'Guardar Contacto' }}
+              {{ cargandoGuardado ? 'Guardando...' : (modoEdicion ? 'Actualizar' : 'Guardar Contacto') }}
             </button>
           </div>
         </form>
@@ -70,19 +83,32 @@ const contactos = ref([])
 const cargando = ref(true)
 const cargandoGuardado = ref(false)
 const mostrarModal = ref(false)
+const modoEdicion = ref(false)
+const contactoIdSeleccionado = ref(null)
+
 const mensajeEstado = ref('')
 const esError = ref(false)
 
 const form = ref({ nombre: '', relacion: '', telefono: '' })
 
-const abrirModal = () => {
-  form.value = { nombre: '', relacion: '', telefono: '' }
+const abrirModal = (contacto = null) => {
+  if (contacto) {
+    modoEdicion.value = true
+    contactoIdSeleccionado.value = contacto.id
+    form.value = { nombre: contacto.nombre, relacion: contacto.relacion, telefono: contacto.telefono }
+  } else {
+    modoEdicion.value = false
+    contactoIdSeleccionado.value = null
+    form.value = { nombre: '', relacion: '', telefono: '' }
+  }
   mostrarModal.value = true
 }
 
 const cerrarModal = () => {
   form.value = { nombre: '', relacion: '', telefono: '' }
   mostrarModal.value = false
+  modoEdicion.value = false
+  contactoIdSeleccionado.value = null
 }
 
 const cargarContactos = async () => {
@@ -102,15 +128,36 @@ const guardarContacto = async () => {
   mensajeEstado.value = ''
   esError.value = false
   try {
-    const res = await api.post('/contactos', form.value)
-    mensajeEstado.value = res.data.mensaje || 'Contacto guardado con éxito'
+    let res
+    if (modoEdicion.value) {
+      res = await api.put(`/contactos/${contactoIdSeleccionado.value}`, form.value)
+      mensajeEstado.value = res.data.mensaje || 'Contacto actualizado con éxito'
+    } else {
+      res = await api.post('/contactos', form.value)
+      mensajeEstado.value = res.data.mensaje || 'Contacto guardado con éxito'
+    }
     cerrarModal()
     await cargarContactos()
   } catch (err) {
     esError.value = true
-    mensajeEstado.value = 'Error al guardar contacto'
+    mensajeEstado.value = 'Error al procesar la solicitud del contacto'
   } finally {
     cargandoGuardado.value = false
+  }
+}
+
+const eliminarContacto = async (id) => {
+  if (!confirm('¿Estás seguro de que deseas eliminar este contacto de emergencia?')) return
+  
+  mensajeEstado.value = ''
+  esError.value = false
+  try {
+    const res = await api.delete(`/contactos/${id}`)
+    mensajeEstado.value = res.data.mensaje || 'Contacto eliminado con éxito'
+    await cargarContactos()
+  } catch (err) {
+    esError.value = true
+    mensajeEstado.value = 'Error al eliminar el contacto'
   }
 }
 
