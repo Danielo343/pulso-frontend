@@ -1,75 +1,118 @@
-<script setup>
-import { ref } from 'vue'
-import PageHeader from '@/components/common/PageHeader.vue'
-import SearchBar from '@/components/common/SearchBar.vue'
-import FilterBar from '@/components/common/FilterBar.vue'
-import Pagination from '@/components/common/Pagination.vue'
-import Badge from '@/components/common/Badge.vue'
-import Card from '@/components/ui/Card.vue'
-import Table from '@/components/ui/Table.vue'
-import Button from '@/components/ui/Button.vue'
-import Modal from '@/components/ui/Modal.vue'
-import Input from '@/components/ui/Input.vue'
-import { contactosMock } from '@/services/mockData'
-
-const search = ref('')
-const showModal = ref(false)
-
-const columns = [
-  { key: 'nombre', label: 'Contacto' },
-  { key: 'relacion', label: 'Relación' },
-  { key: 'telefono', label: 'Teléfono' },
-  { key: 'prioridad', label: 'Prioridad', align: 'center' }
-]
-</script>
-
 <template>
-  <div>
-    <PageHeader
-      title="Contactos de Emergencia"
-      subtitle="Personas a notificar ante una alerta médica"
-      :breadcrumb="[{ label: 'Dashboard', to: '/' }, { label: 'Contactos de Emergencia' }]"
-    >
-      <template #actions>
-        <Button variant="primary" @click="showModal = true">
-          <template #icon-left>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-          </template>
-          Agregar contacto
-        </Button>
-      </template>
-    </PageHeader>
-
-    <Card>
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
-        <SearchBar v-model="search" placeholder="Buscar contacto..." />
-        <FilterBar :filters="[{ label: 'Prioridad' }, { label: 'Relación' }]" />
+  <div class="space-y-6 max-w-6xl mx-auto">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">Contactos de Emergencia</h1>
+        <p class="text-sm text-gray-500 mt-1">Red de apoyo y familiares guardados en MongoDB Atlas.</p>
       </div>
+      <button @click="abrirModal" class="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow transition">
+        + Nuevo Contacto
+      </button>
+    </div>
 
-      <Table :columns="columns" :rows="contactosMock">
-        <template #cell-prioridad="{ value }">
-          <Badge :variant="value === 'Principal' ? 'info' : 'neutral'">{{ value }}</Badge>
-        </template>
-        <template #cell-telefono="{ value }">
-          <span class="nums">{{ value }}</span>
-        </template>
-      </Table>
+    <!-- Alerta -->
+    <div v-if="mensajeEstado" :class="`p-4 rounded-lg text-sm flex items-center justify-between ${esError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`">
+      <span>{{ mensajeEstado }}</span>
+      <button @click="mensajeEstado = ''" class="font-bold ml-4">&times;</button>
+    </div>
 
-      <Pagination :current-page="1" :total-pages="1" :total-items="4" />
-    </Card>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div v-if="cargando" class="text-center py-8 text-gray-500 text-sm">Cargando contactos...</div>
+      <div v-else-if="contactos.length === 0" class="text-center py-8 text-gray-500 text-sm">No hay contactos de emergencia registrados.</div>
 
-    <Modal v-model="showModal" title="Agregar contacto de emergencia" size="md">
-      <div class="space-y-4">
-        <Input label="Nombre completo" placeholder="Ej. María Martínez" />
-        <Input label="Relación" placeholder="Hija, médico tratante..." />
-        <Input label="Teléfono" type="tel" placeholder="+52 33 1234 5678" />
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div v-for="(item, idx) in contactos" :key="idx" class="p-4 border rounded-lg bg-gray-50 space-y-2">
+          <div class="flex justify-between items-center">
+            <h3 class="font-bold text-gray-800 text-base">{{ item.nombre }}</h3>
+            <span class="text-xs bg-blue-100 text-blue-800 font-medium px-2 py-0.5 rounded">{{ item.relacion }}</span>
+          </div>
+          <p class="text-sm text-gray-600 flex items-center space-x-1">
+            <span>📞 {{ item.telefono }}</span>
+          </p>
+        </div>
       </div>
-      <template #footer>
-        <Button variant="ghost" @click="showModal = false">Cancelar</Button>
-        <Button variant="primary" @click="showModal = false">Guardar contacto</Button>
-      </template>
-    </Modal>
+    </div>
+
+    <!-- Modal Nuevo Contacto -->
+    <div v-if="mostrarModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl">
+        <h3 class="text-lg font-bold text-gray-800">Agregar Contacto de Emergencia</h3>
+        <form @submit.prevent="guardarContacto" class="space-y-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Nombre Completo</label>
+            <input v-model="form.nombre" type="text" required class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Ej: Maria González" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Parentezco / Relación</label>
+            <input v-model="form.relacion" type="text" required class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Ej: Hija, Médico Familiar" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Teléfono</label>
+            <input v-model="form.telefono" type="text" required class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="3312345678" />
+          </div>
+          <div class="flex justify-end space-x-2 pt-2">
+            <button type="button" @click="cerrarModal" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
+            <button type="submit" :disabled="cargandoGuardado" class="px-4 py-2 text-sm bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              {{ cargandoGuardado ? 'Guardando...' : 'Guardar Contacto' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import api from '../services/api'
+
+const contactos = ref([])
+const cargando = ref(true)
+const cargandoGuardado = ref(false)
+const mostrarModal = ref(false)
+const mensajeEstado = ref('')
+const esError = ref(false)
+
+const form = ref({ nombre: '', relacion: '', telefono: '' })
+
+const abrirModal = () => {
+  form.value = { nombre: '', relacion: '', telefono: '' }
+  mostrarModal.value = true
+}
+
+const cerrarModal = () => {
+  form.value = { nombre: '', relacion: '', telefono: '' }
+  mostrarModal.value = false
+}
+
+const cargarContactos = async () => {
+  cargando.value = true
+  try {
+    const res = await api.get('/contactos')
+    contactos.value = res.data
+  } catch (err) {
+    console.error('Error al cargar contactos:', err)
+  } finally {
+    cargando.value = false
+  }
+}
+
+const guardarContacto = async () => {
+  cargandoGuardado.value = true
+  mensajeEstado.value = ''
+  esError.value = false
+  try {
+    const res = await api.post('/contactos', form.value)
+    mensajeEstado.value = res.data.mensaje || 'Contacto guardado con éxito'
+    cerrarModal()
+    await cargarContactos()
+  } catch (err) {
+    esError.value = true
+    mensajeEstado.value = 'Error al guardar contacto'
+  } finally {
+    cargandoGuardado.value = false
+  }
+}
+
+onMounted(() => { cargarContactos() })
+</script>

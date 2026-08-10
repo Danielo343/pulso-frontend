@@ -1,105 +1,247 @@
-<script setup>
-import { ref } from 'vue'
-import PageHeader from '@/components/common/PageHeader.vue'
-import SearchBar from '@/components/common/SearchBar.vue'
-import FilterBar from '@/components/common/FilterBar.vue'
-import Pagination from '@/components/common/Pagination.vue'
-import Badge from '@/components/common/Badge.vue'
-import Card from '@/components/ui/Card.vue'
-import Table from '@/components/ui/Table.vue'
-import Button from '@/components/ui/Button.vue'
-import Modal from '@/components/ui/Modal.vue'
-import Input from '@/components/ui/Input.vue'
-import { usuariosMock } from '@/services/mockData'
-
-const search = ref('')
-const showModal = ref(false)
-
-const columns = [
-  { key: 'nombre', label: 'Paciente' },
-  { key: 'edad', label: 'Edad', align: 'center' },
-  { key: 'parentesco', label: 'Parentesco' },
-  { key: 'dispositivo', label: 'Dispositivo' },
-  { key: 'estado', label: 'Estado', align: 'center' },
-  { key: 'acciones', label: '', align: 'right' }
-]
-
-const badgeVariant = (estado) => {
-  if (estado === 'Estable') return 'success'
-  if (estado === 'En observación') return 'warning'
-  return 'danger'
-}
-</script>
-
 <template>
-  <div>
-    <PageHeader
-      title="Usuarios"
-      subtitle="Adultos mayores registrados y monitoreados en Pulso"
-      :breadcrumb="[{ label: 'Dashboard', to: '/' }, { label: 'Usuarios' }]"
-    >
-      <template #actions>
-        <Button variant="primary" @click="showModal = true">
-          <template #icon-left>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-          </template>
-          Agregar usuario
-        </Button>
-      </template>
-    </PageHeader>
+  <div class="space-y-6 max-w-6xl mx-auto">
+    <!-- Encabezado -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">Gestión de Usuarios y Roles</h1>
+        <p class="text-sm text-gray-500 mt-1">Administra los accesos de administradores, pacientes y cuidadores.</p>
+      </div>
+      <button
+        @click="abrirModalCrear"
+        class="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow transition flex items-center justify-center space-x-2"
+      >
+        <span>+ Nuevo Usuario</span>
+      </button>
+    </div>
 
-    <Card>
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
-        <SearchBar v-model="search" placeholder="Buscar por nombre de paciente..." />
-        <FilterBar :filters="[{ label: 'Estado' }, { label: 'Parentesco' }, { label: 'Dispositivo' }]" />
+    <!-- Alertas de Estado -->
+    <div v-if="mensajeEstado" :class="`p-4 rounded-lg text-sm flex items-center justify-between ${esError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`">
+      <span>{{ mensajeEstado }}</span>
+      <button @click="mensajeEstado = ''" class="font-bold ml-4">&times;</button>
+    </div>
+
+    <!-- Barra de Búsqueda y Filtro de Roles -->
+    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col sm:flex-row gap-3 justify-between">
+      <input
+        v-model="busqueda"
+        type="text"
+        placeholder="Buscar por nombre o correo..."
+        class="px-3 py-2 border rounded-lg text-sm w-full sm:w-64 focus:ring-2 focus:ring-blue-500"
+      />
+      
+      <select v-model="filtroRol" class="px-3 py-2 border rounded-lg text-sm w-full sm:w-48 bg-white">
+        <option value="">Todos los roles</option>
+        <option value="administrador">Administrador</option>
+        <option value="paciente">Paciente / Adulto Mayor</option>
+        <option value="cuidador">Cuidador / Familiar</option>
+      </select>
+    </div>
+
+    <!-- Tabla de Usuarios -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div v-if="cargando" class="text-center py-12 text-gray-500 text-sm">
+        Cargando usuarios desde MongoDB Atlas...
       </div>
 
-      <Table :columns="columns" :rows="usuariosMock">
-        <template #cell-nombre="{ row }">
-          <div class="flex items-center gap-3">
-            <div class="h-9 w-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-semibold flex-shrink-0">
-              {{ row.nombre.split(' ').map((n) => n[0]).slice(0, 2).join('') }}
-            </div>
-            <span class="font-medium text-ink-800">{{ row.nombre }}</span>
-          </div>
-        </template>
-        <template #cell-estado="{ value }">
-          <Badge :variant="badgeVariant(value)">{{ value }}</Badge>
-        </template>
-        <template #cell-acciones="{ row }">
-          <div class="flex justify-end gap-1">
-            <button class="h-8 w-8 flex items-center justify-center rounded-lg text-ink-400 hover:bg-primary-50 hover:text-primary-600 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
-              </svg>
-            </button>
-            <button class="h-8 w-8 flex items-center justify-center rounded-lg text-ink-400 hover:bg-red-50 hover:text-red-500 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397M4.772 5.79c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-              </svg>
-            </button>
-          </div>
-        </template>
-      </Table>
-
-      <Pagination :current-page="1" :total-pages="3" :total-items="24" />
-    </Card>
-
-    <Modal v-model="showModal" title="Agregar usuario" size="md">
-      <div class="space-y-4">
-        <Input label="Nombre completo" placeholder="Ej. Rosa Martínez" />
-        <div class="grid grid-cols-2 gap-4">
-          <Input label="Edad" type="number" placeholder="78" />
-          <Input label="Parentesco" placeholder="Madre" />
-        </div>
-        <Input label="Dispositivo asignado" placeholder="Pulsera Pulso M2" />
+      <div v-else-if="usuariosFiltrados.length === 0" class="text-center py-12 text-gray-500 text-sm">
+        No se encontraron usuarios registrados.
       </div>
-      <template #footer>
-        <Button variant="ghost" @click="showModal = false">Cancelar</Button>
-        <Button variant="primary" @click="showModal = false">Guardar usuario</Button>
-      </template>
-    </Modal>
+
+      <div v-else class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <th class="py-3 px-4">Usuario</th>
+              <th class="py-3 px-4">Rol Asignado</th>
+              <th class="py-3 px-4">Teléfono</th>
+              <th class="py-3 px-4">Estado</th>
+              <th class="py-3 px-4 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 text-sm">
+            <tr v-for="user in usuariosFiltrados" :key="user._id || user.id" class="hover:bg-gray-50/50">
+              <td class="py-3 px-4 flex items-center space-x-3">
+                <img :src="user.foto || user.avatar || 'https://ui-avatars.com/api/?name=' + urlencode(user.nombre || user.name)" class="w-9 h-9 rounded-full object-cover border" />
+                <div>
+                  <p class="font-medium text-gray-800">{{ user.nombre || user.name }}</p>
+                  <p class="text-xs text-gray-500">{{ user.email }}</p>
+                </div>
+              </td>
+
+              <td class="py-3 px-4">
+                <span :class="`inline-block px-2.5 py-0.5 text-xs font-semibold rounded-full capitalize ${
+                  user.rol === 'administrador' ? 'bg-purple-100 text-purple-800' :
+                  user.rol === 'cuidador' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                }`">
+                  {{ user.rol || 'paciente' }}
+                </span>
+              </td>
+
+              <td class="py-3 px-4 text-gray-600">{{ user.telefono || 'Sin teléfono' }}</td>
+
+              <td class="py-3 px-4">
+                <span :class="`inline-block px-2 py-0.5 text-xs font-medium rounded ${
+                  user.estado === 'inactivo' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                }`">
+                  {{ user.estado || 'activo' }}
+                </span>
+              </td>
+
+              <td class="py-3 px-4 text-right space-x-2">
+                <button @click="abrirModalEditar(user)" class="text-blue-600 hover:text-blue-800 text-xs font-semibold">Editar / Rol</button>
+                <button @click="eliminarUsuario(user._id || user.id)" class="text-red-600 hover:text-red-800 text-xs font-semibold">Eliminar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal Crear / Editar -->
+    <div v-if="mostrarModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl">
+        <h3 class="text-lg font-bold text-gray-800">{{ modoEdicion ? 'Editar Usuario / Rol' : 'Nuevo Usuario' }}</h3>
+
+        <form @submit.prevent="guardarUsuario" class="space-y-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Nombre Completo</label>
+            <input v-model="form.nombre" type="text" required class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Ej: Juan Pérez" />
+          </div>
+
+          <div v-if="!modoEdicion">
+            <label class="block text-xs font-medium text-gray-700 mb-1">Correo Electrónico</label>
+            <input v-model="form.email" type="email" required class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="usuario@pulso.com" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Rol del Sistema</label>
+            <select v-model="form.rol" class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+              <option value="administrador">Administrador</option>
+              <option value="paciente">Paciente / Adulto Mayor</option>
+              <option value="cuidador">Cuidador / Familiar</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Teléfono</label>
+            <input v-model="form.telefono" type="text" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="3312345678" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">{{ modoEdicion ? 'Nueva Contraseña (Opcional)' : 'Contraseña' }}</label>
+            <input v-model="form.password" type="password" :required="!modoEdicion" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="••••••••" />
+          </div>
+
+          <div class="flex justify-end space-x-2 pt-2">
+            <button type="button" @click="mostrarModal = false" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
+            <button type="submit" class="px-4 py-2 text-sm bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">
+              {{ modoEdicion ? 'Guardar Cambios' : 'Crear Usuario' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import api from '../services/api'
+
+const usuarios = ref([])
+const cargando = ref(true)
+const mostrarModal = ref(false)
+const modoEdicion = ref(false)
+const usuarioIdEdicion = ref(null)
+
+const busqueda = ref('')
+const filtroRol = ref('')
+const mensajeEstado = ref('')
+const esError = ref(false)
+
+const form = ref({
+  nombre: '',
+  email: '',
+  rol: 'paciente',
+  telefono: '',
+  password: ''
+})
+
+const urlencode = (str) => encodeURIComponent(str || 'Usuario')
+
+const usuariosFiltrados = computed(() => {
+  return usuarios.value.filter(u => {
+    const coincideNombre = (u.nombre || u.name || '').toLowerCase().includes(busqueda.value.toLowerCase()) ||
+                          (u.email || '').toLowerCase().includes(busqueda.value.toLowerCase())
+    const coincideRol = !filtroRol.value || u.rol === filtroRol.value
+    return coincideNombre && coincideRol
+  })
+})
+
+const cargarUsuarios = async () => {
+  cargando.value = true
+  try {
+    const res = await api.get('/usuarios')
+    usuarios.value = res.data
+  } catch (err) {
+    console.error('Error al cargar usuarios:', err)
+  } finally {
+    cargando.value = false
+  }
+}
+
+const abrirModalCrear = () => {
+  modoEdicion.value = false
+  usuarioIdEdicion.value = null
+  form.value = { nombre: '', email: '', rol: 'paciente', telefono: '', password: '' }
+  mostrarModal.value = true
+}
+
+const abrirModalEditar = (usuario) => {
+  modoEdicion.value = true
+  usuarioIdEdicion.value = usuario._id || usuario.id
+  form.value = {
+    nombre: usuario.nombre || usuario.name || '',
+    email: usuario.email || '',
+    rol: usuario.rol || 'paciente',
+    telefono: usuario.telefono || '',
+    password: ''
+  }
+  mostrarModal.value = true
+}
+
+const guardarUsuario = async () => {
+  mensajeEstado.value = ''
+  esError.value = false
+  try {
+    if (modoEdicion.value) {
+      await api.put(`/usuarios/${usuarioIdEdicion.value}`, form.value)
+      mensajeEstado.value = 'Usuario actualizado con éxito'
+    } else {
+      await api.post('/usuarios', form.value)
+      mensajeEstado.value = 'Usuario creado con éxito'
+    }
+    mostrarModal.value = false
+    await cargarUsuarios()
+  } catch (err) {
+    esError.value = true
+    mensajeEstado.value = err.response?.data?.mensaje || 'Error al guardar usuario'
+  }
+}
+
+const eliminarUsuario = async (id) => {
+  if (!confirm('¿Seguro que deseas eliminar este usuario?')) return
+  try {
+    await api.delete(`/usuarios/${id}`)
+    mensajeEstado.value = 'Usuario eliminado correctamente'
+    await cargarUsuarios()
+  } catch (err) {
+    esError.value = true
+    mensajeEstado.value = 'Error al eliminar el usuario'
+  }
+}
+
+onMounted(() => {
+  cargarUsuarios()
+})
+</script>

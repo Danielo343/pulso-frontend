@@ -1,81 +1,124 @@
-<script setup>
-import { ref } from 'vue'
-import PageHeader from '@/components/common/PageHeader.vue'
-import SearchBar from '@/components/common/SearchBar.vue'
-import FilterBar from '@/components/common/FilterBar.vue'
-import Pagination from '@/components/common/Pagination.vue'
-import Badge from '@/components/common/Badge.vue'
-import Card from '@/components/ui/Card.vue'
-import Table from '@/components/ui/Table.vue'
-import Button from '@/components/ui/Button.vue'
-import Modal from '@/components/ui/Modal.vue'
-import Input from '@/components/ui/Input.vue'
-import { eventosMock } from '@/services/mockData'
-
-const search = ref('')
-const showModal = ref(false)
-
-const columns = [
-  { key: 'titulo', label: 'Evento' },
-  { key: 'usuario', label: 'Paciente' },
-  { key: 'tipo', label: 'Tipo', align: 'center' },
-  { key: 'fecha', label: 'Fecha y hora' }
-]
-
-const badgeVariant = (tipo) => {
-  if (tipo === 'Cita médica') return 'info'
-  if (tipo === 'Laboratorio') return 'warning'
-  return 'success'
-}
-</script>
-
 <template>
-  <div>
-    <PageHeader
-      title="Eventos"
-      subtitle="Citas médicas, terapias y estudios programados"
-      :breadcrumb="[{ label: 'Dashboard', to: '/' }, { label: 'Eventos' }]"
-    >
-      <template #actions>
-        <Button variant="primary" @click="showModal = true">
-          <template #icon-left>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-          </template>
-          Agregar evento
-        </Button>
-      </template>
-    </PageHeader>
-
-    <Card>
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
-        <SearchBar v-model="search" placeholder="Buscar evento..." />
-        <FilterBar :filters="[{ label: 'Tipo' }, { label: 'Paciente' }, { label: 'Rango de fecha' }]" />
+  <div class="space-y-6 max-w-6xl mx-auto">
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">Eventos y Citas Médicas</h1>
+        <p class="text-sm text-gray-500 mt-1">Gestión dinámica de eventos consultados desde MongoDB Atlas.</p>
       </div>
+      <button @click="abrirModal" class="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow transition">
+        + Nuevo Evento
+      </button>
+    </div>
 
-      <Table :columns="columns" :rows="eventosMock">
-        <template #cell-tipo="{ value }">
-          <Badge :variant="badgeVariant(value)">{{ value }}</Badge>
-        </template>
-      </Table>
+    <!-- Alertas -->
+    <div v-if="mensajeEstado" :class="`p-4 rounded-lg text-sm flex items-center justify-between ${esError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`">
+      <span>{{ mensajeEstado }}</span>
+      <button @click="mensajeEstado = ''" class="font-bold ml-4">&times;</button>
+    </div>
 
-      <Pagination :current-page="1" :total-pages="2" :total-items="12" />
-    </Card>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div v-if="cargando" class="text-center py-8 text-gray-500 text-sm">Cargando eventos desde MongoDB...</div>
+      <div v-else-if="eventos.length === 0" class="text-center py-8 text-gray-500 text-sm">No hay eventos ni citas agendadas.</div>
 
-    <Modal v-model="showModal" title="Agregar evento" size="md">
-      <div class="space-y-4">
-        <Input label="Título del evento" placeholder="Ej. Consulta de control" />
-        <Input label="Paciente" placeholder="Buscar paciente..." />
-        <div class="grid grid-cols-2 gap-4">
-          <Input label="Tipo" placeholder="Cita médica, terapia..." />
-          <Input label="Fecha y hora" type="datetime-local" />
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div v-for="(item, idx) in eventos" :key="idx" class="p-4 border rounded-lg bg-gray-50 space-y-2">
+          <div class="flex justify-between items-start">
+            <span class="text-xs font-semibold uppercase text-purple-600 bg-purple-50 px-2 py-1 rounded">{{ item.tipo }}</span>
+            <span class="text-xs text-gray-400">{{ formatearFecha(item.fecha) }}</span>
+          </div>
+          <h3 class="font-bold text-gray-800 text-base">{{ item.titulo }}</h3>
+          <p class="text-sm text-gray-600">{{ item.descripcion }}</p>
         </div>
       </div>
-      <template #footer>
-        <Button variant="ghost" @click="showModal = false">Cancelar</Button>
-        <Button variant="primary" @click="showModal = false">Guardar evento</Button>
-      </template>
-    </Modal>
+    </div>
+
+    <!-- Modal Nuevo Evento -->
+    <div v-if="mostrarModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl">
+        <h3 class="text-lg font-bold text-gray-800">Agendar Evento / Cita</h3>
+        <form @submit.prevent="guardarEvento" class="space-y-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Título del Evento</label>
+            <input v-model="form.titulo" type="text" required class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Ej: Consulta Cardiólogo" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Tipo de Evento</label>
+            <select v-model="form.tipo" class="w-full px-3 py-2 border rounded-lg text-sm bg-white">
+              <option value="cita_medica">Cita Médica</option>
+              <option value="alerta_medica">Alerta de Salud</option>
+              <option value="seguimiento">Seguimiento Rutinario</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">Descripción</label>
+            <textarea v-model="form.descripcion" required class="w-full px-3 py-2 border rounded-lg text-sm" rows="3" placeholder="Detalles del evento..."></textarea>
+          </div>
+          <div class="flex justify-end space-x-2 pt-2">
+            <button type="button" @click="cerrarModal" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
+            <button type="submit" :disabled="cargandoGuardado" class="px-4 py-2 text-sm bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              {{ cargandoGuardado ? 'Guardando...' : 'Guardar Evento' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import api from '../services/api'
+
+const eventos = ref([])
+const cargando = ref(true)
+const cargandoGuardado = ref(false)
+const mostrarModal = ref(false)
+const mensajeEstado = ref('')
+const esError = ref(false)
+
+const form = ref({ titulo: '', descripcion: '', tipo: 'cita_medica' })
+
+const abrirModal = () => {
+  form.value = { titulo: '', descripcion: '', tipo: 'cita_medica' }
+  mostrarModal.value = true
+}
+
+const cerrarModal = () => {
+  form.value = { titulo: '', descripcion: '', tipo: 'cita_medica' }
+  mostrarModal.value = false
+}
+
+const cargarEventos = async () => {
+  cargando.value = true
+  try {
+    const res = await api.get('/eventos')
+    eventos.value = res.data
+  } catch (err) {
+    console.error('Error al cargar eventos:', err)
+  } finally {
+    cargando.value = false
+  }
+}
+
+const guardarEvento = async () => {
+  cargandoGuardado.value = true
+  mensajeEstado.value = ''
+  esError.value = false
+  try {
+    const res = await api.post('/eventos', form.value)
+    mensajeEstado.value = res.data.mensaje || 'Evento guardado exitosamente.'
+    cerrarModal()
+    await cargarEventos()
+  } catch (err) {
+    esError.value = true
+    mensajeEstado.value = err.response?.data?.mensaje || 'Error al guardar el evento.'
+    console.error('Error al guardar evento:', err)
+  } finally {
+    cargandoGuardado.value = false
+  }
+}
+
+const formatearFecha = (f) => f ? new Date(f).toLocaleString() : ''
+
+onMounted(() => { cargarEventos() })
+</script>
