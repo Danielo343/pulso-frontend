@@ -6,6 +6,7 @@ import AppLayout from '../layouts/AppLayout.vue'
 import AuthLayout from '../layouts/AuthLayout.vue'
 
 // Vistas
+import ChatMedicoView from '../views/ChatMedicoView.vue'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import UsuariosView from '../views/UsuariosView.vue'
@@ -40,6 +41,7 @@ const routes = [
     redirect: '/dashboard',
     meta: { requiereAuth: true },
     children: [
+      { path: 'chat', name: 'chat', component: ChatMedicoView },
       { path: 'dashboard', name: 'dashboard', component: DashboardView },
       { path: 'usuarios', name: 'usuarios', component: UsuariosView },
       { path: 'contactos', name: 'contactos', component: ContactosView },

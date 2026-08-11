@@ -5,12 +5,12 @@
         <h1 class="text-2xl font-bold text-gray-800">Contactos de Emergencia</h1>
         <p class="text-sm text-gray-500 mt-1">Red de apoyo y familiares guardados en MongoDB Atlas.</p>
       </div>
-      <button @click="abrirModal()" class="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow transition">
+      <button @click="abrirModalCrear" class="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow transition">
         + Nuevo Contacto
       </button>
     </div>
 
-    <!-- Alerta -->
+    <!-- Alertas -->
     <div v-if="mensajeEstado" :class="`p-4 rounded-lg text-sm flex items-center justify-between ${esError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`">
       <span>{{ mensajeEstado }}</span>
       <button @click="mensajeEstado = ''" class="font-bold ml-4">&times;</button>
@@ -21,20 +21,13 @@
       <div v-else-if="contactos.length === 0" class="text-center py-8 text-gray-500 text-sm">No hay contactos de emergencia registrados.</div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div v-for="(item, idx) in contactos" :key="item.id || idx" class="p-4 border rounded-lg bg-gray-50 space-y-3 relative group">
-          <div class="flex justify-between items-start">
-            <div>
-              <h3 class="font-bold text-gray-800 text-base">{{ item.nombre }}</h3>
+        <div v-for="(item, idx) in contactos" :key="item.id || item._id || idx" class="p-4 border rounded-lg bg-gray-50 space-y-2 relative group">
+          <div class="flex justify-between items-center">
+            <h3 class="font-bold text-gray-800 text-base">{{ item.nombre }}</h3>
+            <div class="flex items-center space-x-2">
               <span class="text-xs bg-blue-100 text-blue-800 font-medium px-2 py-0.5 rounded">{{ item.relacion }}</span>
-            </div>
-            <!-- Botones de Acción (Editar / Eliminar) -->
-            <div class="flex space-x-1">
-              <button @click="abrirModal(item)" class="p-1 text-gray-500 hover:text-blue-600 text-xs bg-white border rounded shadow-sm" title="Editar">
-                ✏️
-              </button>
-              <button @click="eliminarContacto(item.id)" class="p-1 text-gray-500 hover:text-red-600 text-xs bg-white border rounded shadow-sm" title="Eliminar">
-                🗑️
-              </button>
+              <button @click="abrirModalEditar(item)" class="text-gray-400 hover:text-blue-600 text-xs" title="Editar">✏️</button>
+              <button @click="eliminarContacto(item.id || item._id)" class="text-gray-400 hover:text-red-600 text-xs" title="Eliminar">🗑️</button>
             </div>
           </div>
           <p class="text-sm text-gray-600 flex items-center space-x-1">
@@ -44,12 +37,10 @@
       </div>
     </div>
 
-    <!-- Modal Formulario (Crear / Editar) -->
+    <!-- Modal Crear / Editar -->
     <div v-if="mostrarModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
       <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl">
-        <h3 class="text-lg font-bold text-gray-800">
-          {{ modoEdicion ? 'Editar Contacto de Emergencia' : 'Agregar Contacto de Emergencia' }}
-        </h3>
+        <h3 class="text-lg font-bold text-gray-800">{{ modoEdicion ? 'Editar Contacto de Emergencia' : 'Agregar Contacto de Emergencia' }}</h3>
         <form @submit.prevent="guardarContacto" class="space-y-3">
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Nombre Completo</label>
@@ -57,7 +48,7 @@
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Parentezco / Relación</label>
-            <input v-model="form.relacion" type="text" required class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Ej: Hija, Médico Familiar" />
+            <input v-model="form.relacion" type="text" required class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Ej: Hermano, Hija, Médico" />
           </div>
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">Teléfono</label>
@@ -78,28 +69,36 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../services/api'
+import { useUiStore } from '../stores/ui'
+
+const uiStore = useUiStore()
 
 const contactos = ref([])
 const cargando = ref(true)
 const cargandoGuardado = ref(false)
 const mostrarModal = ref(false)
 const modoEdicion = ref(false)
-const contactoIdSeleccionado = ref(null)
+const contactoTargetId = ref(null)
 
 const mensajeEstado = ref('')
 const esError = ref(false)
 
 const form = ref({ nombre: '', relacion: '', telefono: '' })
 
-const abrirModal = (contacto = null) => {
-  if (contacto) {
-    modoEdicion.value = true
-    contactoIdSeleccionado.value = contacto.id
-    form.value = { nombre: contacto.nombre, relacion: contacto.relacion, telefono: contacto.telefono }
-  } else {
-    modoEdicion.value = false
-    contactoIdSeleccionado.value = null
-    form.value = { nombre: '', relacion: '', telefono: '' }
+const abrirModalCrear = () => {
+  modoEdicion.value = false
+  contactoTargetId.value = null
+  form.value = { nombre: '', relacion: '', telefono: '' }
+  mostrarModal.value = true
+}
+
+const abrirModalEditar = (item) => {
+  modoEdicion.value = true
+  contactoTargetId.value = item.id || item._id
+  form.value = {
+    nombre: item.nombre || '',
+    relacion: item.relacion || '',
+    telefono: item.telefono || ''
   }
   mostrarModal.value = true
 }
@@ -107,15 +106,13 @@ const abrirModal = (contacto = null) => {
 const cerrarModal = () => {
   form.value = { nombre: '', relacion: '', telefono: '' }
   mostrarModal.value = false
-  modoEdicion.value = false
-  contactoIdSeleccionado.value = null
 }
 
 const cargarContactos = async () => {
   cargando.value = true
   try {
     const res = await api.get('/contactos')
-    contactos.value = res.data
+    contactos.value = res.data || []
   } catch (err) {
     console.error('Error al cargar contactos:', err)
   } finally {
@@ -128,32 +125,31 @@ const guardarContacto = async () => {
   mensajeEstado.value = ''
   esError.value = false
   try {
-    let res
     if (modoEdicion.value) {
-      res = await api.put(`/contactos/${contactoIdSeleccionado.value}`, form.value)
-      mensajeEstado.value = res.data.mensaje || 'Contacto actualizado con éxito'
+      await api.put(`/contactos/${contactoTargetId.value}`, form.value)
+      mensajeEstado.value = 'Contacto actualizado con éxito'
+      uiStore.mostrarToast('Contacto actualizado', 'exito')
     } else {
-      res = await api.post('/contactos', form.value)
-      mensajeEstado.value = res.data.mensaje || 'Contacto guardado con éxito'
+      await api.post('/contactos', form.value)
+      mensajeEstado.value = 'Contacto guardado con éxito'
+      uiStore.mostrarToast('Contacto guardado', 'exito')
     }
     cerrarModal()
     await cargarContactos()
   } catch (err) {
     esError.value = true
-    mensajeEstado.value = 'Error al procesar la solicitud del contacto'
+    mensajeEstado.value = 'Error al procesar el contacto'
   } finally {
     cargandoGuardado.value = false
   }
 }
 
 const eliminarContacto = async (id) => {
-  if (!confirm('¿Estás seguro de que deseas eliminar este contacto de emergencia?')) return
-  
-  mensajeEstado.value = ''
-  esError.value = false
+  if (!confirm('¿Seguro que deseas eliminar este contacto?')) return
   try {
-    const res = await api.delete(`/contactos/${id}`)
-    mensajeEstado.value = res.data.mensaje || 'Contacto eliminado con éxito'
+    await api.delete(`/contactos/${id}`)
+    mensajeEstado.value = 'Contacto eliminado con éxito'
+    uiStore.mostrarToast('Contacto eliminado', 'exito')
     await cargarContactos()
   } catch (err) {
     esError.value = true

@@ -1,89 +1,112 @@
-<script setup>
-import { RouterLink } from 'vue-router'
-import NavIcon from '@/components/common/NavIcon.vue'
-import { useUiStore } from '@/stores/ui'
-
-const ui = useUiStore()
-
-const navItems = [
-  { label: 'Dashboard', to: '/', icon: 'dashboard' },
-  { label: 'Usuarios', to: '/usuarios', icon: 'usuarios' },
-  { label: 'Dispositivos', to: '/dispositivos', icon: 'dispositivos' },
-  { label: 'Mediciones', to: '/mediciones', icon: 'mediciones' },
-  { label: 'Medicamentos', to: '/medicamentos', icon: 'medicamentos' },
-  { label: 'Historial Médico', to: '/historial-medico', icon: 'historial' },
-  { label: 'Contactos de Emergencia', to: '/contactos', icon: 'contactos' },
-  { label: 'Eventos', to: '/eventos', icon: 'eventos' },
-  { label: 'Notificaciones', to: '/notificaciones', icon: 'notificaciones' },
-  { label: 'Archivos Médicos', to: '/archivos-medicos', icon: 'archivos' },
-  { label: 'Recetas Médicas', to: '/recetas', icon: 'recetas' },
-  { label: 'Reportes', to: '/reportes', icon: 'reportes' },
-  { label: 'Configuración', to: '/configuracion', icon: 'configuracion' }
-]
-</script>
-
 <template>
-  <!-- Overlay móvil -->
-  <Transition
-    enter-active-class="transition-opacity duration-200"
-    enter-from-class="opacity-0"
-    enter-to-class="opacity-100"
-    leave-active-class="transition-opacity duration-150"
-    leave-from-class="opacity-100"
-    leave-to-class="opacity-0"
-  >
-    <div
-      v-if="ui.sidebarOpen"
-      class="fixed inset-0 bg-ink-900/40 z-30 lg:hidden"
-      @click="ui.closeSidebar()"
-    />
-  </Transition>
-
   <aside
-    class="fixed lg:sticky top-0 left-0 h-screen w-72 bg-white border-r border-ink-200/70 z-40 flex flex-col transition-transform duration-300 lg:translate-x-0"
-    :class="ui.sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+    :class="`fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+      uiStore.sidebarAbierto ? 'translate-x-0' : '-translate-x-full'
+    }`"
   >
-    <!-- Logo -->
-    <div class="h-16 flex items-center gap-3 px-6 border-b border-ink-200/70 flex-shrink-0">
-      <div class="relative h-9 w-9 flex items-center justify-center rounded-xl bg-primary-600">
-        <span class="absolute inset-0 rounded-xl bg-primary-500 animate-pulse-ring"></span>
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white relative" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M2 12h4l1.5-4L12 18l2-9 1.5 3H22" />
-        </svg>
-      </div>
+    <div class="h-16 flex items-center px-6 border-b border-gray-200 space-x-3">
+      <img src="/pulso-icon.svg" alt="Pulso" class="w-8 h-8" />
       <div>
-        <p class="font-display font-extrabold text-lg text-ink-900 leading-none">Pulso</p>
-        <p class="text-[11px] text-ink-400 mt-0.5">Monitoreo de salud</p>
+        <span class="font-bold text-xl text-blue-600 tracking-tight block">Pulso</span>
+        <span class="text-[10px] text-gray-400 font-medium block -mt-1">Monitoreo de salud</span>
       </div>
     </div>
 
-    <!-- Navegación -->
-    <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-      <RouterLink
-        v-for="item in navItems"
-        :key="item.to"
-        :to="item.to"
-        class="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-ink-500 transition-colors hover:bg-primary-50 hover:text-primary-700"
-        active-class="!bg-primary-600 !text-white shadow-sm shadow-primary-600/20"
-        @click="ui.closeSidebar()"
-      >
-        <NavIcon :name="item.icon" class="flex-shrink-0" />
-        <span class="truncate">{{ item.label }}</span>
-      </RouterLink>
-    </nav>
+    <div class="px-4 py-4 space-y-1 overflow-y-auto max-h-[calc(100vh-120px)]">
+      <p class="px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
+        Rol Activo: {{ miRol }}
+      </p>
 
-    <!-- Estado del sistema -->
-    <div class="p-4 border-t border-ink-200/70 flex-shrink-0">
-      <div class="flex items-center gap-3 rounded-xl bg-accent-50 px-3 py-3">
-        <span class="relative flex h-2.5 w-2.5">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent-500"></span>
-        </span>
-        <div class="text-xs">
-          <p class="font-semibold text-accent-700">Todos los dispositivos activos</p>
-          <p class="text-accent-600/80">Última sincronización: hace 2 min</p>
-        </div>
+      <nav class="space-y-1">
+        <router-link to="/dashboard" class="item-link" active-class="item-link-active">
+          <span>░░</span><span>Dashboard</span>
+        </router-link>
+
+        <!-- Exclusivo Administrador -->
+        <router-link v-if="miRol === 'administrador'" to="/usuarios" class="item-link" active-class="item-link-active">
+          <span>👥</span><span>Gestión Usuarios</span>
+        </router-link>
+
+        <!-- Exclusivo Administrador -->
+        <router-link v-if="miRol === 'administrador'" to="/dispositivos" class="item-link" active-class="item-link-active">
+          <span>📱</span><span>Dispositivos</span>
+        </router-link>
+
+        <router-link to="/mediciones" class="item-link" active-class="item-link-active">
+          <span>📈</span><span>Mediciones</span>
+        </router-link>
+
+        <router-link to="/medicamentos" class="item-link" active-class="item-link-active">
+          <span>💊</span><span>Medicamentos</span>
+        </router-link>
+
+        <router-link v-if="miRol === 'administrador' || miRol === 'paciente'" to="/historial-medico" class="item-link" active-class="item-link-active">
+          <span>📋</span><span>Historial Médico</span>
+        </router-link>
+
+        <router-link to="/contactos" class="item-link" active-class="item-link-active">
+          <span>📞</span><span>Contactos de Emergencia</span>
+        </router-link>
+
+        <router-link to="/eventos" class="item-link" active-class="item-link-active">
+          <span>📅</span><span>Eventos</span>
+        </router-link>
+
+        <router-link to="/notificaciones" class="item-link" active-class="item-link-active">
+          <span>🔔</span><span>Notificaciones</span>
+        </router-link>
+
+        <router-link to="/archivos-medicos" class="item-link" active-class="item-link-active">
+          <span>📁</span><span>Archivos Médicos</span>
+        </router-link>
+
+        <router-link to="/recetas" class="item-link" active-class="item-link-active">
+          <span>📑</span><span>Recetas Médicas</span>
+        </router-link>
+
+        <router-link to="/reportes" class="item-link" active-class="item-link-active">
+          <span>📊</span><span>Reportes</span>
+        </router-link>
+
+        <router-link to="/configuracion" class="item-link" active-class="item-link-active">
+          <span>⚙️</span><span>Configuración</span>
+        </router-link>
+
+        <router-link to="/chat" class="item-link" active-class="item-link-active">
+          <span>💬</span><span>Chat Médico en Vivo</span>
+        </router-link>
+      </nav>
+    </div>
+
+    <div class="absolute bottom-4 left-4 right-4 p-3 bg-green-50 border border-green-200 rounded-xl text-xs">
+      <div class="flex items-center space-x-2">
+        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        <span class="font-bold text-green-800">Todos los dispositivos activos</span>
       </div>
+      <p class="text-[10px] text-green-600 mt-0.5">Última sincronización: hace 2 min</p>
     </div>
   </aside>
 </template>
+
+<script setup>
+import { computed } from 'vue'
+import { useUiStore } from '../../stores/ui'
+import { useAuthStore } from '../../stores/auth'
+
+const uiStore = useUiStore()
+const authStore = useAuthStore()
+
+const miRol = computed(() => {
+  const rol = authStore.usuario?.rol || authStore.usuario?.role
+  return (rol || 'administrador').toLowerCase()
+})
+</script>
+
+<style scoped>
+.item-link {
+  @apply flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-gray-600 hover:bg-gray-100 transition;
+}
+.item-link-active {
+  @apply bg-blue-600 text-white font-bold shadow-sm hover:bg-blue-700;
+}
+</style>

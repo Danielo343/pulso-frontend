@@ -1,24 +1,30 @@
 import { defineStore } from 'pinia'
 
-/**
- * Store de interfaz general.
- * Controla el estado visual de la aplicación (sidebar, tema, etc).
- * No contiene lógica de negocio ni llamadas a servicios externos.
- */
 export const useUiStore = defineStore('ui', {
   state: () => ({
-    sidebarOpen: false, // estado del sidebar en móvil
-    sidebarCollapsed: false // estado colapsado en escritorio
+    sidebarAbierto: false,
+    toast: {
+      visible: false,
+      mensaje: '',
+      tipo: 'exito' // 'exito' | 'error' | 'alerta'
+    }
   }),
+
   actions: {
     toggleSidebar() {
-      this.sidebarOpen = !this.sidebarOpen
+      this.sidebarAbierto = !this.sidebarAbierto
     },
-    closeSidebar() {
-      this.sidebarOpen = false
+    mostrarToast(mensaje, tipo = 'exito') {
+      this.toast.mensaje = mensaje
+      this.toast.tipo = tipo
+      this.toast.visible = true
+
+      setTimeout(() => {
+        this.toast.visible = false
+      }, 4000)
     },
-    toggleCollapsed() {
-      this.sidebarCollapsed = !this.sidebarCollapsed
+    ocultarToast() {
+      this.toast.visible = false
     }
   }
 })

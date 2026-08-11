@@ -68,6 +68,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../services/api'
+import { useUiStore } from '../stores/ui'
+
+const uiStore = useUiStore()
 
 const eventos = ref([])
 const cargando = ref(true)
@@ -92,7 +95,7 @@ const cargarEventos = async () => {
   cargando.value = true
   try {
     const res = await api.get('/eventos')
-    eventos.value = res.data
+    eventos.value = res.data || []
   } catch (err) {
     console.error('Error al cargar eventos:', err)
   } finally {
@@ -107,11 +110,15 @@ const guardarEvento = async () => {
   try {
     const res = await api.post('/eventos', form.value)
     mensajeEstado.value = res.data.mensaje || 'Evento guardado exitosamente.'
+    
+    // Disparar Notificación Flotante Emergente
+    uiStore.mostrarToast(`📅 Nueva cita agendada: ${form.value.titulo}`, 'alerta')
+    
     cerrarModal()
     await cargarEventos()
   } catch (err) {
     esError.value = true
-    mensajeEstado.value = err.response?.data?.mensaje || 'Error al guardar el evento.'
+    mensajeEstado.value = 'Error al guardar el evento.'
     console.error('Error al guardar evento:', err)
   } finally {
     cargandoGuardado.value = false

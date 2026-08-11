@@ -1,13 +1,11 @@
 <template>
   <div class="space-y-6 max-w-6xl mx-auto">
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800">Centro de Notificaciones</h1>
-        <p class="text-sm text-gray-500 mt-1">Avisos y alertas médicas consultadas desde MongoDB Atlas.</p>
-      </div>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">Centro de Notificaciones</h1>
+      <p class="text-sm text-gray-500 mt-1">Avisos y alertas médicas consultadas desde MongoDB Atlas.</p>
     </div>
 
-    <!-- Alerta de estado -->
+    <!-- Alertas -->
     <div v-if="mensajeEstado" :class="`p-4 rounded-lg text-sm flex items-center justify-between ${esError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`">
       <span>{{ mensajeEstado }}</span>
       <button @click="mensajeEstado = ''" class="font-bold ml-4">&times;</button>
@@ -20,36 +18,21 @@
       <div v-else class="space-y-3">
         <div
           v-for="(item, idx) in notificaciones"
-          :key="item.id || idx"
-          :class="`p-4 border rounded-lg flex items-start justify-between space-x-4 transition ${item.leida ? 'bg-gray-50 border-gray-100 text-gray-600' : 'bg-blue-50/50 border-blue-100 text-gray-800'}`"
+          :key="item.id || item._id || idx"
+          :class="`p-4 border rounded-lg flex items-start justify-between space-x-4 ${item.leida ? 'bg-gray-50 border-gray-100' : 'bg-blue-50/50 border-blue-100'}`"
         >
-          <div class="space-y-1 flex-1">
+          <div class="flex-1">
             <div class="flex items-center space-x-2">
-              <span class="font-bold text-sm">{{ item.titulo || item.title || 'Alerta de Monitoreo' }}</span>
+              <span class="font-bold text-gray-800 text-sm">{{ item.titulo || item.title || 'Alerta de Monitoreo' }}</span>
               <span v-if="!item.leida" class="text-[10px] bg-blue-600 text-white font-bold px-1.5 py-0.5 rounded">NUEVA</span>
             </div>
-            <p class="text-xs text-gray-600">{{ item.mensaje || item.descripcion || item.description || 'Aviso registrado en el sistema.' }}</p>
-            <span class="text-[11px] text-gray-400 block">{{ formatearFecha(item.fecha) }}</span>
+            <p class="text-xs text-gray-600 mt-1">{{ item.mensaje || item.descripcion || 'Aviso registrado en el sistema.' }}</p>
+            <p class="text-[10px] text-gray-400 mt-1">{{ formatearFecha(item.fecha) }}</p>
           </div>
 
-          <!-- Botones de Acción -->
-          <div class="flex items-center space-x-2">
-            <button
-              v-if="!item.leida"
-              @click="marcarLeida(item.id)"
-              class="px-2.5 py-1 text-xs bg-white border border-blue-200 text-blue-600 hover:bg-blue-50 rounded shadow-sm transition"
-              title="Marcar como leída"
-            >
-              ✓ Marcar leída
-            </button>
-            <button
-              @click="eliminarNotificacion(item.id)"
-              class="p-1 text-gray-400 hover:text-red-600 text-xs bg-white border border-gray-200 rounded shadow-sm transition"
-              title="Eliminar notificación"
-            >
-              🗑️
-            </button>
-          </div>
+          <button @click="eliminarNotificacion(item.id || item._id)" class="text-gray-400 hover:text-red-600 text-xs p-1" title="Eliminar notificación">
+            🗑️
+          </button>
         </div>
       </div>
     </div>
@@ -59,6 +42,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../services/api'
+import { useUiStore } from '../stores/ui'
+
+const uiStore = useUiStore()
 
 const notificaciones = ref([])
 const cargando = ref(true)
@@ -69,7 +55,7 @@ const cargarNotificaciones = async () => {
   cargando.value = true
   try {
     const res = await api.get('/notificaciones')
-    notificaciones.value = res.data
+    notificaciones.value = res.data || []
   } catch (err) {
     console.error('Error al cargar notificaciones:', err)
   } finally {
@@ -77,30 +63,15 @@ const cargarNotificaciones = async () => {
   }
 }
 
-const marcarLeida = async (id) => {
-  // Actualización optimista local inmediata para garantizar respuesta en UI
-  const notif = notificaciones.value.find(n => n.id === id || n._id === id)
-  if (notif) notif.leida = true
-
-  try {
-    await api.put(`/notificaciones/${id}/leer`)
-    mensajeEstado.value = 'Notificación marcada como leída'
-    esError.value = false
-  } catch (err) {
-    console.error('Error en API al marcar como leída:', err)
-  }
-}
-
 const eliminarNotificacion = async (id) => {
-  // Eliminación optimista local inmediata
-  notificaciones.value = notificaciones.value.filter(n => n.id !== id && n._id !== id)
-  mensajeEstado.value = 'Notificación eliminada correctamente'
-  esError.value = false
-
   try {
     await api.delete(`/notificaciones/${id}`)
+    mensajeEstado.value = 'Notificación eliminada correctamente'
+    uiStore.mostrarToast('Notificación eliminada', 'exito')
+    await cargarNotificaciones()
   } catch (err) {
-    console.error('Error en API al eliminar:', err)
+    esError.value = true
+    mensajeEstado.value = 'Error al eliminar la notificación'
   }
 }
 
