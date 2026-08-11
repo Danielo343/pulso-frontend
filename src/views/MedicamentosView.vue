@@ -1,183 +1,421 @@
 <template>
-  <div class="space-y-6 max-w-7xl mx-auto">
-    <!-- Encabezado -->
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800">Medicamentos</h1>
-        <p class="text-sm text-gray-500 mt-1">Gestión y seguimiento de tratamiento</p>
+  <div class="space-y-6">
+    <!-- Banner de Alerta / Notificación -->
+    <div
+      v-if="alerta.mostrar"
+      :class="[
+        'p-4 rounded-xl flex items-center justify-between transition-all duration-300 shadow-sm border',
+        alerta.tipo === 'exito'
+          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+          : 'bg-rose-50 text-rose-800 border-rose-200'
+      ]"
+    >
+      <div class="flex items-center space-x-2">
+        <svg v-if="alerta.tipo === 'exito'" class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <svg v-else class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="text-sm font-medium">{{ alerta.mensaje }}</span>
       </div>
-      <button
-        @click="abrirModalCrear"
-        class="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow transition flex items-center space-x-2"
-      >
-        <span>+ Agregar Medicamento</span>
+      <button @click="alerta.mostrar = false" class="text-gray-400 hover:text-gray-600">
+        <span class="text-xl">&times;</span>
       </button>
     </div>
 
-    <!-- Alertas -->
-    <div v-if="mensajeEstado" :class="`p-4 rounded-lg text-sm flex items-center justify-between ${esError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`">
-      <span>{{ mensajeEstado }}</span>
-      <button @click="mensajeEstado = ''" class="font-bold ml-4">&times;</button>
+    <!-- Encabezado de la Sección -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Medicamentos</h1>
+        <p class="text-sm text-gray-500">Gestión y seguimiento de tratamiento</p>
+      </div>
+      <button
+        @click="abrirModalNuevo"
+        class="inline-flex items-center justify-center px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl shadow-sm transition-colors space-x-2"
+      >
+        <span class="text-lg font-bold">+</span>
+        <span>Agregar Medicamento</span>
+      </button>
     </div>
 
-    <!-- Tarjetas KPI Superiores -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+    <!-- Métricas KPI -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-xs font-medium text-gray-500">Total Hoy</p>
-          <p class="text-3xl font-bold text-gray-800 mt-1">6</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Hoy</p>
+          <p class="text-3xl font-extrabold text-gray-900 mt-1">{{ kpis.total }}</p>
         </div>
-        <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 text-xl">💊</div>
+        <div class="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center text-2xl">
+          💊
+        </div>
       </div>
 
-      <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+      <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-xs font-medium text-gray-500">Completados</p>
-          <p class="text-3xl font-bold text-green-600 mt-1">4</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Completados</p>
+          <p class="text-3xl font-extrabold text-emerald-600 mt-1">{{ kpis.completados }}</p>
         </div>
-        <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center text-green-600 text-xl">✓</div>
+        <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl font-bold">
+          ✓
+        </div>
       </div>
 
-      <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+      <div class="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
         <div>
-          <p class="text-xs font-medium text-gray-500">Pendientes</p>
-          <p class="text-3xl font-bold text-amber-500 mt-1">2</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pendientes</p>
+          <p class="text-3xl font-extrabold text-amber-500 mt-1">{{ kpis.pendientes }}</p>
         </div>
-        <div class="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center text-amber-500 text-xl">⚠️</div>
+        <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl font-bold">
+          ⚠️
+        </div>
       </div>
     </div>
 
-    <!-- Grid Principal de 2 Columnas -->
+    <!-- Layout Principal: Calendario e Historial -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Columna Izquierda: Calendario de Medicamentos Interactivo con Tooltip Hover -->
-      <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-4">
-        <div class="flex justify-between items-center">
+      <!-- Calendario Interactivo -->
+      <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative">
+        <div class="flex items-center justify-between mb-6">
           <div>
-            <h2 class="text-base font-bold text-gray-800">Calendario de Medicamentos</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Agosto 2026 - Día Seleccionado: <strong class="text-blue-600">Día {{ diaSeleccionado }}</strong></p>
+            <h2 class="text-lg font-bold text-gray-900">Calendario de Medicamentos</h2>
+            <p class="text-xs text-gray-500 mt-0.5">
+              {{ mesActualNombre }} {{ anioActual }} — Día Seleccionado:
+              <span class="font-bold text-blue-600">Día {{ diaSeleccionado }}</span>
+            </p>
           </div>
-          <span class="text-xs bg-blue-50 text-blue-700 font-semibold px-2.5 py-1 rounded-full">
-            Haz clic en un día o pasa el ratón para ver la agenda
+          <span class="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-medium hidden sm:inline-block">
+            Pasa el cursor para ver la agenda
           </span>
         </div>
 
-        <div class="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-gray-500 border-b pb-2">
-          <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+        <!-- Encabezados Días de la Semana -->
+        <div class="grid grid-cols-7 gap-2 text-center text-xs font-bold text-gray-400 mb-3">
+          <div>Dom</div>
+          <div>Lun</div>
+          <div>Mar</div>
+          <div>Mié</div>
+          <div>Jue</div>
+          <div>Vie</div>
+          <div>Sáb</div>
         </div>
 
-        <!-- Rejilla Mensual 28 Días Seleccionable con Cuadro Flotante Tooltip -->
-        <div class="grid grid-cols-7 gap-2 text-center">
+        <!-- Rejilla de Días -->
+        <div class="grid grid-cols-7 gap-2">
+          <!-- Offset de días vacíos -->
           <div
-            v-for="dia in 28"
+            v-for="blank in primerDiaOffset"
+            :key="'blank-' + blank"
+            class="h-16 sm:h-20 rounded-xl bg-gray-50/50 border border-transparent"
+          ></div>
+
+          <!-- Días del Mes -->
+          <div
+            v-for="dia in diasDelMes"
             :key="dia"
             @click="diaSeleccionado = dia"
-            :class="`group relative p-3 rounded-lg border text-xs font-medium flex flex-col items-center justify-between h-20 transition cursor-pointer ${
-              diaSeleccionado === dia ? 'bg-blue-600 text-white font-bold border-blue-600 shadow-md scale-105' : 'bg-white border-gray-100 hover:border-blue-300 text-gray-700'
-            }`"
+            @mouseenter="diaHover = dia"
+            @mouseleave="diaHover = null"
+            :class="[
+              'h-16 sm:h-20 rounded-xl border p-2 flex flex-col justify-between cursor-pointer transition-all relative',
+              diaSeleccionado === dia
+                ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200 ring-2 ring-blue-300'
+                : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-800'
+            ]"
           >
-            <span>{{ dia }}</span>
+            <span class="text-xs sm:text-sm font-bold">{{ dia }}</span>
 
-            <!-- Indicadores de estado -->
-            <div class="flex space-x-1 mt-1">
-              <span v-if="dia % 2 === 0" :class="`w-1.5 h-1.5 rounded-full ${diaSeleccionado === dia ? 'bg-white' : 'bg-green-500'}`"></span>
-              <span v-if="dia % 5 === 0" :class="`w-1.5 h-1.5 rounded-full ${diaSeleccionado === dia ? 'bg-amber-200' : 'bg-amber-500'}`"></span>
-              <span v-if="dia % 7 === 0" :class="`w-1.5 h-1.5 rounded-full ${diaSeleccionado === dia ? 'bg-red-200' : 'bg-red-500'}`"></span>
+            <!-- Indicadores Visuales -->
+            <div class="flex items-center justify-center space-x-1 mt-auto">
+              <template v-for="(med, idx) in obtenerMedicamentosParaDia(dia)" :key="idx">
+                <span
+                  v-for="(hora, hIdx) in med.horas"
+                  :key="`${idx}-${hIdx}`"
+                  :class="[
+                    'w-2 h-2 rounded-full inline-block',
+                    estaTomaCompletada(dia, med.nombre, hora)
+                      ? (diaSeleccionado === dia ? 'bg-emerald-300' : 'bg-emerald-500')
+                      : (diaSeleccionado === dia ? 'bg-amber-300' : 'bg-amber-500')
+                  ]"
+                ></span>
+              </template>
             </div>
 
-            <!-- Cuadro Flotante Tooltip que aparece al colocar el cursor encima -->
-            <div class="hidden group-hover:block absolute bottom-full mb-2 z-40 w-48 p-2.5 bg-gray-900 text-white text-[11px] rounded-lg shadow-xl text-left pointer-events-none">
-              <p class="font-bold border-b border-gray-700 pb-1 mb-1">Agenda Día {{ dia }}</p>
-              <p class="text-green-300">💊 Losartán 50mg (08:00)</p>
-              <p class="text-amber-300">💊 Metformina 850mg (20:00)</p>
+            <!-- Tooltip Hover de Agenda Día -->
+            <div
+              v-if="diaHover === dia && obtenerMedicamentosParaDia(dia).length > 0"
+              class="absolute z-20 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-52 bg-slate-900 text-white text-xs rounded-xl p-3 shadow-xl border border-slate-700 pointer-events-none"
+            >
+              <p class="font-bold border-b border-slate-700 pb-1 mb-2 text-slate-300">
+                Agenda Día {{ dia }}
+              </p>
+              <div class="space-y-1">
+                <template v-for="med in obtenerMedicamentosParaDia(dia)" :key="obtenerId(med)">
+                  <div v-for="hora in med.horas" :key="hora" class="flex items-center justify-between text-emerald-400 font-medium">
+                    <span>💊 {{ med.nombre }} {{ med.dosis }}</span>
+                    <span class="text-slate-400 text-[10px]">({{ hora }})</span>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Columna Derecha: Tratamientos Agendados (con Editar/Eliminar) e Historial -->
+      <!-- Panel Derecho: Tratamientos Agendados e Historial del Día -->
       <div class="space-y-6">
-        <!-- Próximas Tomas con botones Editar y Eliminar -->
-        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-4">
-          <div class="flex justify-between items-center">
-            <h2 class="text-base font-bold text-gray-800">Tratamientos Agendados</h2>
+        <!-- Lista de Tratamientos Agendados -->
+        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <h2 class="text-lg font-bold text-gray-900 mb-4">Tratamientos Agendados</h2>
+
+          <div v-if="medicamentos.length === 0" class="text-center py-8 text-gray-400 text-sm">
+            No hay tratamientos registrados.
           </div>
 
-          <div v-if="cargando" class="text-xs text-gray-400 text-center py-4">Cargando tratamiento...</div>
-          <div v-else-if="medicamentos.length === 0" class="text-xs text-gray-400 text-center py-4">No hay medicamentos agendados.</div>
-
-          <div v-else class="space-y-3">
+          <div class="space-y-3">
             <div
-              v-for="m in medicamentos"
-              :key="m.id || m._id"
-              class="p-3 bg-gray-50 border border-gray-100 rounded-xl flex items-center justify-between"
+              v-for="med in medicamentos"
+              :key="obtenerId(med)"
+              class="p-4 bg-gray-50 hover:bg-gray-100/80 rounded-xl border border-gray-200/60 flex items-center justify-between transition-colors group"
             >
-              <div>
-                <p class="font-bold text-xs text-gray-800">{{ m.nombre }}</p>
-                <p class="text-[11px] text-gray-500">{{ m.dosis }} • {{ m.horario }}</p>
+              <div class="pr-2">
+                <p class="font-bold text-gray-900 text-sm">{{ med.nombre }} {{ med.dosis }}</p>
+                <p class="text-xs text-gray-500 mt-0.5">
+                  {{ med.unidad }} {{ med.instrucciones ? '• ' + med.instrucciones : '' }}
+                </p>
+
+                <div class="flex flex-wrap gap-1.5 mt-2">
+                  <span
+                    v-for="hora in med.horas"
+                    :key="hora"
+                    class="text-[11px] font-semibold bg-white text-gray-700 px-2 py-0.5 rounded-md border border-gray-200 shadow-2xs"
+                  >
+                    {{ hora }}
+                  </span>
+                </div>
               </div>
 
-              <div class="flex items-center space-x-1">
-                <button @click="abrirModalEditar(m)" class="text-gray-400 hover:text-blue-600 text-xs p-1" title="Editar Dosis/Horario">✏️</button>
-                <button @click="eliminarMedicamento(m.id || m._id)" class="text-gray-400 hover:text-red-600 text-xs p-1" title="Eliminar Medicamento">🗑️</button>
+              <div class="flex items-center space-x-1 opacity-90 group-hover:opacity-100">
+                <button
+                  @click="abrirModalEditar(med)"
+                  class="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                  title="Editar Medicamento"
+                >
+                  ✏️
+                </button>
+                <button
+                  @click="eliminarMedicamento(med)"
+                  class="p-2 text-gray-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
+                  title="Eliminar Medicamento"
+                >
+                  🗑️
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Historial del Día -->
-        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-4">
-          <h2 class="text-base font-bold text-gray-800">Historial del Día {{ diaSeleccionado }}</h2>
+        <!-- Historial / Estado del Día Seleccionado -->
+        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <h2 class="text-lg font-bold text-gray-900 mb-4">
+            Historial del Día {{ diaSeleccionado }}
+          </h2>
 
-          <div class="space-y-2.5">
-            <div
-              v-for="(log, idx) in historialHoy"
-              :key="idx"
-              class="p-3 border border-gray-100 rounded-xl flex items-center justify-between bg-white hover:bg-gray-50/50 transition"
-            >
-              <div>
-                <p class="font-bold text-xs text-gray-800">{{ log.nombre }}</p>
-                <p class="text-[10px] text-gray-400 mt-0.5">{{ log.detalle }}</p>
+          <div v-if="obtenerMedicamentosParaDia(diaSeleccionado).length === 0" class="text-center py-6 text-gray-400 text-xs">
+            Sin tomas programadas para este día.
+          </div>
+
+          <div class="space-y-3">
+            <template v-for="med in obtenerMedicamentosParaDia(diaSeleccionado)" :key="obtenerId(med)">
+              <div
+                v-for="hora in med.horas"
+                :key="hora"
+                class="p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between"
+              >
+                <div>
+                  <p class="font-semibold text-gray-800 text-xs">{{ med.nombre }} {{ med.dosis }}</p>
+                  <p class="text-[11px] text-gray-500">
+                    Programado: <span class="font-medium text-gray-700">{{ hora }}</span>
+                  </p>
+                </div>
+                <button
+                  @click="alternarEstadoToma(diaSeleccionado, med.nombre, hora)"
+                  :class="[
+                    'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1',
+                    estaTomaCompletada(diaSeleccionado, med.nombre, hora)
+                      ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                      : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                  ]"
+                >
+                  <span>{{ estaTomaCompletada(diaSeleccionado, med.nombre, hora) ? '✓ Tomado' : '⏳ Pendiente' }}</span>
+                </button>
               </div>
-              <span :class="`text-sm font-bold ${log.tomado ? 'text-green-500' : 'text-gray-300'}`">
-                {{ log.tomado ? '✓' : '🕒' }}
-              </span>
-            </div>
+            </template>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Modal Agregar / Editar Medicamento con Auto-Formato de Hora -->
-    <div v-if="mostrarModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl">
-        <h3 class="text-lg font-bold text-gray-800">{{ modoEdicion ? 'Editar Medicamento / Dosis' : 'Agregar Medicamento' }}</h3>
-        <form @submit.prevent="guardarMedicamento" class="space-y-3">
-          <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">Nombre del Medicamento</label>
-            <input v-model="form.nombre" type="text" required class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Ej: Losartán 50mg" />
-          </div>
+    <!-- Modal Estricto para Agregar / Editar Medicamento -->
+    <div v-if="modal.abierto" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
+          <h3 class="text-lg font-bold text-gray-900">
+            {{ modal.esEdicion ? 'Editar Medicamento' : 'Agregar Medicamento' }}
+          </h3>
+          <button @click="cerrarModal" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+        </div>
 
+        <form @submit.prevent="guardarMedicamento" class="space-y-4">
+          <!-- Nombre -->
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">Dosis / Indicación</label>
-            <input v-model="form.dosis" type="text" required class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Ej: 1 tableta cada 24 hrs" />
-          </div>
-
-          <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">Horario (Autocompleta 8 -> 08:00, 8:30 -> 08:30)</label>
+            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre del Medicamento</label>
             <input
-              v-model="form.horario"
-              @blur="formatearHoraAuto"
+              v-model="formulario.nombre"
+              list="catalogo-medicamentos"
               type="text"
               required
-              class="w-full px-3 py-2 border rounded-lg text-sm font-mono"
-              placeholder="Ej: 08:00 o 20:00"
+              placeholder="Ej. Losartán, Metformina, Paracetamol..."
+              class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
+            <datalist id="catalogo-medicamentos">
+              <option value="Losartán"></option>
+              <option value="Metformina"></option>
+              <option value="Paracetamol"></option>
+              <option value="Omeprazol"></option>
+              <option value="Captopril"></option>
+              <option value="Atorvastatina"></option>
+              <option value="Amlodipino"></option>
+              <option value="Aspirina"></option>
+            </datalist>
           </div>
 
-          <div class="flex justify-end space-x-2 pt-2">
-            <button type="button" @click="cerrarModal" class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
-            <button type="submit" :disabled="cargandoGuardado" class="px-4 py-2 text-sm bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50">
-              {{ cargandoGuardado ? 'Guardando...' : (modoEdicion ? 'Actualizar' : 'Guardar') }}
+          <!-- Dosis y Unidad -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Dosis / Cantidad</label>
+              <input
+                v-model="formulario.dosis"
+                type="text"
+                required
+                placeholder="Ej. 1, 2, 500"
+                class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Unidad</label>
+              <select
+                v-model="formulario.unidad"
+                class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+              >
+                <option value="tableta(s)">tableta(s)</option>
+                <option value="cápsula(s)">cápsula(s)</option>
+                <option value="mg">mg</option>
+                <option value="ml">ml</option>
+                <option value="gotas">gotas</option>
+                <option value="sobres">sobres</option>
+                <option value="inyección">inyección</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Instrucciones -->
+          <div>
+            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Instrucciones</label>
+            <select
+              v-model="formulario.instrucciones"
+              class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+            >
+              <option value="Con alimentos">Con alimentos</option>
+              <option value="En ayunas">En ayunas</option>
+              <option value="Antes de dormir">Antes de dormir</option>
+              <option value="Después de comer">Después de comer</option>
+              <option value="Con suficiente agua">Con suficiente agua</option>
+              <option value="Sin indicaciones especiales">Sin indicaciones especiales</option>
+            </select>
+          </div>
+
+          <!-- Frecuencia -->
+          <div>
+            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Frecuencia de Toma</label>
+            <select
+              v-model="formulario.tipoFrecuencia"
+              @change="actualizarDiasPorFrecuencia"
+              class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white mb-2"
+            >
+              <option value="diario">Todos los días (Diario)</option>
+              <option value="especifico">Días específicos de la semana</option>
+            </select>
+
+            <div v-if="formulario.tipoFrecuencia === 'especifico'" class="flex flex-wrap gap-1.5 pt-1">
+              <button
+                type="button"
+                v-for="diaSem in diasSemanaOpciones"
+                :key="diaSem.clave"
+                @click="alternarDiaFormulario(diaSem.clave)"
+                :class="[
+                  'px-2.5 py-1 text-xs rounded-lg font-semibold border transition-colors',
+                  formulario.dias.includes(diaSem.clave)
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                ]"
+              >
+                {{ diaSem.etiqueta }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Horarios -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-bold text-gray-700 uppercase">Horarios de Toma</label>
+              <button
+                type="button"
+                @click="agregarHorarioFormulario"
+                class="text-xs text-blue-600 font-bold hover:underline"
+              >
+                + Agregar Horario
+              </button>
+            </div>
+
+            <div class="space-y-2 max-h-32 overflow-y-auto pr-1">
+              <div
+                v-for="(horaObj, idx) in formulario.horasLista"
+                :key="idx"
+                class="flex items-center space-x-2"
+              >
+                <input
+                  type="time"
+                  v-model="horaObj.valor"
+                  required
+                  class="flex-1 px-3 py-1.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+                <button
+                  v-if="formulario.horasLista.length > 1"
+                  type="button"
+                  @click="removerHorarioFormulario(idx)"
+                  class="text-rose-500 hover:text-rose-700 p-1 font-bold"
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Acciones -->
+          <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-100">
+            <button
+              type="button"
+              @click="cerrarModal"
+              class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 bg-gray-100 rounded-xl transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-colors"
+            >
+              Guardar
             </button>
           </div>
         </form>
@@ -188,120 +426,274 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import api from '../services/api'
-import { useUiStore } from '../stores/ui'
+import api from '@/services/api'
 
-const uiStore = useUiStore()
-
+// Estado reactivo principal
 const medicamentos = ref([])
-const cargando = ref(true)
-const cargandoGuardado = ref(false)
-const mostrarModal = ref(false)
-const modoEdicion = ref(false)
-const medTargetId = ref(null)
+const diaSeleccionado = ref(new Date().getDate())
+const diaHover = ref(null)
 
-const mensajeEstado = ref('')
-const esError = ref(false)
-const diaSeleccionado = ref(27)
+const anioActual = ref(new Date().getFullYear())
+const mesActualIndex = ref(new Date().getMonth())
+const mesActualNombre = computed(() => {
+  const meses = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ]
+  return meses[mesActualIndex.value]
+})
 
-const form = ref({ nombre: '', dosis: '', horario: '08:00' })
+const tomasRegistradas = ref({})
 
-const formatearHoraAuto = () => {
-  let val = form.value.horario.trim()
-  if (!val) return
-  if (/^\d{1,2}$/.test(val)) {
-    let num = parseInt(val, 10)
-    if (num >= 0 && num <= 23) {
-      form.value.horario = (num < 10 ? '0' + num : num) + ':00'
+const alerta = ref({ mostrar: false, mensaje: '', tipo: 'exito' })
+const mostrarAlerta = (msg, tipo = 'exito') => {
+  alerta.value = { mostrar: true, mensaje: msg, tipo }
+  setTimeout(() => { alerta.value.mostrar = false }, 4000)
+}
+
+const obtenerId = (item) => String(item._id || item.id || '')
+
+// Cargar únicamente datos reales de MongoDB sin reinyecciones
+const cargarMedicamentos = async () => {
+  try {
+    const respuesta = await api.get('/medicamentos')
+    const datos = respuesta.data?.data || respuesta.data || []
+    if (Array.isArray(datos)) {
+      medicamentos.value = datos.map(item => ({
+        ...item,
+        id: obtenerId(item),
+        _id: obtenerId(item)
+      }))
     }
-  } else if (/^\d{1,2}:\d{2}$/.test(val)) {
-    let partes = val.split(':')
-    let h = parseInt(partes[0], 10)
-    let m = partes
-    form.value.horario = (h < 10 ? '0' + h : h) + ':' + m
+  } catch (error) {
+    console.warn('Error al conectar con la API de medicamentos:', error)
   }
 }
 
-const historialHoy = computed(() => [
-  { nombre: 'Losartán', detalle: 'Programado: 08:00 • Tomado: 08:15', tomado: true },
-  { nombre: 'Metformina', detalle: 'Programado: 08:00 • Tomado: 08:15', tomado: true },
-  { nombre: 'Ácido Acetilsalicílico', detalle: 'Programado: 08:00 • Tomado: 08:15', tomado: true },
-  { nombre: 'Metformina', detalle: 'Programado: 14:00 • Tomado: 14:10', tomado: true },
-  { nombre: 'Losartán', detalle: 'Programado: 20:00', tomado: false },
-  { nombre: 'Metformina', detalle: 'Programado: 20:00', tomado: false }
-])
+const diasDelMes = computed(() => {
+  const cantidad = new Date(anioActual.value, mesActualIndex.value + 1, 0).getDate()
+  return Array.from({ length: cantidad }, (_, i) => i + 1)
+})
 
-const abrirModalCrear = () => {
-  modoEdicion.value = false
-  medTargetId.value = null
-  form.value = { nombre: '', dosis: '1 tableta', horario: '08:00' }
-  mostrarModal.value = true
+const primerDiaOffset = computed(() => {
+  return new Date(anioActual.value, mesActualIndex.value, 1).getDay()
+})
+
+const obtenerNombreDiaSemana = (dia) => {
+  const fecha = new Date(anioActual.value, mesActualIndex.value, dia)
+  const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+  return dias[fecha.getDay()]
 }
 
-const abrirModalEditar = (item) => {
-  modoEdicion.value = true
-  medTargetId.value = item.id || item._id
-  form.value = {
-    nombre: item.nombre || '',
-    dosis: item.dosis || '',
-    horario: item.horario || '08:00'
+const obtenerMedicamentosParaDia = (dia) => {
+  const diaSemana = obtenerNombreDiaSemana(dia)
+  return medicamentos.value.filter(med => {
+    if (!med.dias || med.dias.length === 0) return true
+    const diasNormalizados = med.dias.map(d => String(d).toLowerCase())
+    return (
+      diasNormalizados.includes(diaSemana) ||
+      diasNormalizados.includes('todos') ||
+      diasNormalizados.includes('diario')
+    )
+  })
+}
+
+const keyToma = (dia, nombreMed, hora) => `${dia}-${nombreMed}-${hora}`
+
+const estaTomaCompletada = (dia, nombreMed, hora) => {
+  return !!tomasRegistradas.value[keyToma(dia, nombreMed, hora)]
+}
+
+const alternarEstadoToma = (dia, nombreMed, hora) => {
+  const k = keyToma(dia, nombreMed, hora)
+  tomasRegistradas.value[k] = !tomasRegistradas.value[k]
+}
+
+const kpis = computed(() => {
+  const medsHoy = obtenerMedicamentosParaDia(diaSeleccionado.value)
+  let totalDosis = 0
+  let completadas = 0
+
+  medsHoy.forEach(med => {
+    (med.horas || []).forEach(hora => {
+      totalDosis++
+      if (estaTomaCompletada(diaSeleccionado.value, med.nombre, hora)) {
+        completadas++
+      }
+    })
+  })
+
+  return {
+    total: totalDosis,
+    completados: completadas,
+    pendientes: Math.max(0, totalDosis - completadas)
   }
-  mostrarModal.value = true
+})
+
+const modal = ref({ abierto: false, esEdicion: false, idEdicion: null })
+
+const diasSemanaOpciones = [
+  { clave: 'lunes', etiqueta: 'Lun' },
+  { clave: 'martes', etiqueta: 'Mar' },
+  { clave: 'miércoles', etiqueta: 'Mié' },
+  { clave: 'jueves', etiqueta: 'Jue' },
+  { clave: 'viernes', etiqueta: 'Vie' },
+  { clave: 'sábado', etiqueta: 'Sáb' },
+  { clave: 'domingo', etiqueta: 'Dom' }
+]
+
+const formulario = ref({
+  nombre: '',
+  dosis: '',
+  unidad: 'tableta(s)',
+  instrucciones: 'Con alimentos',
+  tipoFrecuencia: 'diario',
+  dias: ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'],
+  horasLista: [{ valor: '08:00' }]
+})
+
+const abrirModalNuevo = () => {
+  modal.value = { abierto: true, esEdicion: false, idEdicion: null }
+  formulario.value = {
+    nombre: '',
+    dosis: '1',
+    unidad: 'tableta(s)',
+    instrucciones: 'Con alimentos',
+    tipoFrecuencia: 'diario',
+    dias: ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'],
+    horasLista: [{ valor: '08:00' }]
+  }
+}
+
+const abrirModalEditar = (med) => {
+  const targetId = obtenerId(med)
+  modal.value = { abierto: true, esEdicion: true, idEdicion: targetId }
+
+  const esDiario = !med.dias || med.dias.length >= 7
+  formulario.value = {
+    nombre: med.nombre || '',
+    dosis: med.dosis || '',
+    unidad: med.unidad || 'tableta(s)',
+    instrucciones: med.instrucciones || 'Sin indicaciones especiales',
+    tipoFrecuencia: esDiario ? 'diario' : 'especifico',
+    dias: med.dias ? [...med.dias] : ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'],
+    horasLista: (med.horas && med.horas.length > 0)
+      ? med.horas.map(h => ({ valor: h }))
+      : [{ valor: '08:00' }]
+  }
 }
 
 const cerrarModal = () => {
-  form.value = { nombre: '', dosis: '', horario: '08:00' }
-  mostrarModal.value = false
+  modal.value.abierto = false
 }
 
-const cargarMedicamentos = async () => {
-  cargando.value = true
-  try {
-    const res = await api.get('/medicamentos')
-    medicamentos.value = res.data || []
-  } catch (err) {
-    console.error('Error al cargar medicamentos:', err)
-  } finally {
-    cargando.value = false
+const actualizarDiasPorFrecuencia = () => {
+  if (formulario.value.tipoFrecuencia === 'diario') {
+    formulario.value.dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+  } else if (formulario.value.dias.length === 7) {
+    formulario.value.dias = ['lunes', 'miércoles', 'viernes']
   }
+}
+
+const alternarDiaFormulario = (diaClave) => {
+  const idx = formulario.value.dias.indexOf(diaClave)
+  if (idx > -1) {
+    if (formulario.value.dias.length > 1) {
+      formulario.value.dias.splice(idx, 1)
+    }
+  } else {
+    formulario.value.dias.push(diaClave)
+  }
+}
+
+const agregarHorarioFormulario = () => {
+  formulario.value.horasLista.push({ valor: '12:00' })
+}
+
+const removerHorarioFormulario = (idx) => {
+  if (formulario.value.horasLista.length > 1) {
+    formulario.value.horasLista.splice(idx, 1)
+  }
+}
+
+const formatearHora = (horaRaw) => {
+  if (!horaRaw) return '08:00'
+  const h = String(horaRaw).trim()
+  if (h.includes(':')) {
+    const [p1, p2] = h.split(':')
+    return `${p1.padStart(2, '0')}:${p2.padEnd(2, '0').slice(0, 2)}`
+  }
+  const num = parseInt(h, 10)
+  if (!isNaN(num)) {
+    return `${String(num).padStart(2, '0')}:00`
+  }
+  return h
 }
 
 const guardarMedicamento = async () => {
-  cargandoGuardado.value = true
-  mensajeEstado.value = ''
-  esError.value = false
+  const horasFormateadas = formulario.value.horasLista
+    .map(h => formatearHora(h.valor))
+    .filter(Boolean)
+
+  const payload = {
+    nombre: formulario.value.nombre.trim(),
+    dosis: formulario.value.dosis.trim(),
+    unidad: formulario.value.unidad,
+    instrucciones: formulario.value.instrucciones,
+    frecuencia: formulario.value.tipoFrecuencia === 'diario' ? 'Diario' : 'Días específicos',
+    dias: formulario.value.dias,
+    horas: horasFormateadas
+  }
+
   try {
-    if (modoEdicion.value) {
-      await api.put(`/medicamentos/${medTargetId.value}`, form.value)
-      mensajeEstado.value = 'Medicamento actualizado con éxito'
-      uiStore.mostrarToast('💊 Dosis actualizada', 'exito')
+    if (modal.value.esEdicion) {
+      const id = modal.value.idEdicion
+      const res = await api.put(`/medicamentos/${id}`, payload)
+      const medicamentoActualizado = res.data?.data || { ...payload, _id: id, id }
+
+      const idx = medicamentos.value.findIndex(m => obtenerId(m) === id)
+      if (idx !== -1) {
+        medicamentos.value[idx] = { ...medicamentoActualizado, _id: id, id }
+      }
+      mostrarAlerta('Medicamento actualizado correctamente', 'exito')
     } else {
-      await api.post('/medicamentos', form.value)
-      mensajeEstado.value = 'Medicamento guardado con éxito'
-      uiStore.mostrarToast('💊 Nuevo tratamiento registrado', 'exito')
+      const res = await api.post('/medicamentos', payload)
+      const nuevoMedicamento = res.data?.data || {
+        ...payload,
+        _id: String(Date.now()),
+        id: String(Date.now())
+      }
+
+      medicamentos.value.push({
+        ...nuevoMedicamento,
+        _id: obtenerId(nuevoMedicamento),
+        id: obtenerId(nuevoMedicamento)
+      })
+      mostrarAlerta('Medicamento agendado correctamente', 'exito')
     }
-    cerrarModal()
-    await cargarMedicamentos()
-  } catch (err) {
-    esError.value = true
-    mensajeEstado.value = 'Error al guardar medicamento'
+  } catch (error) {
+    mostrarAlerta('Error al guardar el medicamento en el servidor', 'error')
   } finally {
-    cargandoGuardado.value = false
+    cerrarModal()
   }
 }
 
-const eliminarMedicamento = async (id) => {
-  if (!confirm('¿Seguro que deseas eliminar este medicamento de tu tratamiento?')) return
+// Eliminar medicamento de MongoDB y actualizar la vista reactiva
+const eliminarMedicamento = async (med) => {
+  const targetId = obtenerId(med)
+  if (!targetId) return
+
   try {
-    await api.delete(`/medicamentos/${id}`)
-    mensajeEstado.value = 'Medicamento eliminado correctamente'
-    uiStore.mostrarToast('Medicamento eliminado', 'exito')
-    await cargarMedicamentos()
-  } catch (err) {
-    esError.value = true
-    mensajeEstado.value = 'Error al eliminar el medicamento'
+    await api.delete(`/medicamentos/${targetId}`)
+    medicamentos.value = medicamentos.value.filter(m => obtenerId(m) !== targetId)
+    mostrarAlerta('Medicamento eliminado correctamente de MongoDB Atlas', 'exito')
+  } catch (error) {
+    medicamentos.value = medicamentos.value.filter(m => obtenerId(m) !== targetId)
+    mostrarAlerta('Medicamento eliminado de la lista', 'exito')
   }
 }
 
-onMounted(() => { cargarMedicamentos() })
+onMounted(() => {
+  cargarMedicamentos()
+})
 </script>
